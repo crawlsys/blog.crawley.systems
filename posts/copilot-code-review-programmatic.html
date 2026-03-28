@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Trigger GitHub Copilot Code Reviews Programmatically | blog.crawley.systems</title>
+  <meta name="description" content="The undocumented bot name, the silent failures, and the three working approaches for requesting Copilot code reviews from CI/CD pipelines and automation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .hero-strip {
+      position: relative;
+      height: 280px;
+      overflow: hidden;
+      margin-top: 72px;
+    }
+    .hero-strip img {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      object-fit: cover;
+      object-position: center 40%;
+      opacity: 0.5;
+    }
+    .hero-strip::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(10,10,11,0.3) 0%, var(--bg-primary) 100%);
+    }
+    .hero-strip__content {
+      max-width: var(--article-width);
+      margin: 0 auto;
+      padding: 20px clamp(20px, 4vw, 48px) 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero-strip">
+    <img src="../copilot-hero.png" alt="">
+  </div>
+
+  <div class="hero-strip__content">
+    <a href="/" class="article-hero__back">&larr; All articles</a>
+    <div class="article-hero__meta">
+      <span class="post-card__date">2026-03-28</span>
+      <span class="post-card__tags">
+        <span class="tag">github</span>
+        <span class="tag">automation</span>
+        <span class="tag">ci-cd</span>
+      </span>
+    </div>
+    <h1 class="article-hero__title">How to Trigger GitHub Copilot Code Reviews Programmatically</h1>
+    <p class="article-hero__subtitle">The undocumented bot name, the silent failures, and the three working approaches for requesting Copilot code reviews from automation.</p>
+  </div>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>GitHub Copilot code review works well from the pull request UI &mdash; you click a button, an AI reviews your diff, and feedback appears within seconds. The problem starts when you try to trigger that same review from a CI/CD pipeline, a GitHub Action, or any automated workflow. The API behavior is undocumented in places that matter, and the failure mode is the worst kind: silent.</p>
+
+      <p>Here's what I found after more trial and error than I'd like to admit.</p>
+
+      <h2>The Problem</h2>
+
+      <p>A reasonable assumption would be that requesting a code review from Copilot works the same way as requesting one from a teammate. It doesn't. If you pass <code>"Copilot"</code> or <code>"copilot"</code> as a reviewer name to GitHub's REST API, you'll get back a <code>201 Created</code> response &mdash; clean, successful, no error. But nothing actually happens. The request vanishes without a trace.</p>
+
+      <p>Why is this a problem worth writing about? Because the API gives you every reason to believe it worked. There's no validation error, no warning header, no indication that your reviewer name was ignored. You move on, your pipeline moves on, and the review never arrives.</p>
+
+      <div class="callout callout--danger">
+        <div class="callout__title">Silent Failure</div>
+        <p>This is, in my opinion, a genuinely bad API design choice. Silent failure is always worse than a loud error.</p>
+      </div>
+
+      <h2>Three Working Approaches</h2>
+
+      <h3>1. GitHub CLI (simplest &mdash; requires gh &ge; 2.88.0)</h3>
+
+      <pre><code><span class="code-label">bash</span>
+gh pr edit &lt;PR#&gt; --add-reviewer "@copilot"</code></pre>
+
+      <p>If your CI environment already has <code>gh</code> installed, this is the path of least resistance. The CLI handles the <code>@copilot</code> alias internally, translating it to the correct bot identity before the API call goes out. You don't need to know (or care about) the underlying bot login name.</p>
+
+      <h3>2. REST API</h3>
+
+      <p>For direct API calls, the correct bot login is <code>copilot-pull-request-reviewer[bot]</code>:</p>
+
+      <pre><code><span class="code-label">bash</span>
+gh api repos/OWNER/REPO/pulls/PR_NUMBER/requested_reviewers \
+  --method POST \
+  --input - &lt;&lt;'EOF'
+{"reviewers":["copilot-pull-request-reviewer[bot]"]}
+EOF</code></pre>
+
+      <p>Or with curl:</p>
+
+      <pre><code><span class="code-label">bash</span>
+curl -X POST \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/OWNER/REPO/pulls/PR_NUMBER/requested_reviewers \
+  -d '{"reviewers":["copilot-pull-request-reviewer[bot]"]}'</code></pre>
+
+      <p>That bot login &mdash; <code>copilot-pull-request-reviewer[bot]</code> &mdash; doesn't appear in any obvious documentation. It's not <code>copilot[bot]</code> (which is the chat assistant), and it's not <code>Copilot</code> as a display name. GitHub maintains a separate, dedicated bot account specifically for the code review feature. How would you discover this on your own? Good question.</p>
+
+      <h3>3. GraphQL API</h3>
+
+      <p>GitHub's GraphQL API treats bot users differently from human users. You'll need the <code>botLogins</code> field rather than <code>userLogins</code>:</p>
+
+      <pre><code><span class="code-label">graphql</span>
+mutation {
+  requestReviewsByLogin(input: {
+    pullRequestId: "&lt;PR_NODE_ID&gt;",
+    botLogins: ["copilot-pull-request-reviewer[bot]"],
+    union: false
+  }) {
+    clientMutationId
+  }
+}</code></pre>
+
+      <p>To get the PR node ID:</p>
+
+      <pre><code><span class="code-label">bash</span>
+gh api repos/OWNER/REPO/pulls/PR_NUMBER --jq '.node_id'</code></pre>
+
+      <h2>The Gotchas</h2>
+
+      <p>Getting the initial request to work is only half the battle. These are the follow-on issues that will cost you debugging time if you don't know about them upfront.</p>
+
+      <p><strong>Silent failure on unrecognized names.</strong> The REST API returns a success response even when it completely ignores a reviewer name you've passed. A typo in the bot login produces no error and no review. Your only reliable option is to verify the reviewer actually appeared by querying the PR's requested reviewers list after the POST.</p>
+
+      <p><strong>Force-pushing can invalidate review state.</strong> If your workflow force-pushes (rebase, squash, amend) after requesting a Copilot review, you may need to re-request it. GitHub dismisses stale reviews on new commits when branch protection rules are configured for it, and I've observed pending review requests silently dropped after force pushes in practice.</p>
+
+      <p><strong>Copilot typically responds in under 30 seconds</strong>, according to GitHub's documentation, though larger PRs can take longer. If you're polling for the review result, wait at least 15&ndash;20 seconds before your first check.</p>
+
+      <div class="callout callout--warning">
+        <div class="callout__title">Names That Don't Work</div>
+        <p>All of these fail silently via the REST API: <code>Copilot</code>, <code>copilot</code>, <code>@copilot</code>, <code>copilot[bot]</code>, <code>copilot-swe-agent[bot]</code>, <code>github-copilot[bot]</code>. Only <code>copilot-pull-request-reviewer[bot]</code> works.</p>
+      </div>
+
+      <h2>Why This Matters for Agentic Workflows</h2>
+
+      <p>Automated pull request workflows are becoming more common, and reliable programmatic review triggering is a prerequisite for several patterns that teams are adopting now:</p>
+
+      <ul>
+        <li><strong>CI/CD pipelines</strong> that auto-request reviews when a PR is opened or updated</li>
+        <li><strong>Kanban and task management systems</strong> that trigger reviews as part of a workflow state change</li>
+        <li><strong>Coding agents</strong> (Claude, Copilot Workspace, etc.) that create PRs and want immediate feedback before notifying a human</li>
+        <li><strong>Custom GitHub Actions</strong> that orchestrate multi-step review processes</li>
+      </ul>
+
+      <p>In my own workflows, I've landed on a pattern that issues the review request and then immediately verifies it took effect:</p>
+
+      <pre><code><span class="code-label">bash</span>
+#!/usr/bin/env bash
+set -euo pipefail
+
+PR_NUMBER="$1"
+REPO="$2"
+
+# Request the review
+gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" \
+  --method POST \
+  --input - &lt;&lt;'EOF'
+{"reviewers":["copilot-pull-request-reviewer[bot]"]}
+EOF
+
+# Verify it was actually requested
+sleep 2
+REVIEWERS=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" \
+  --jq '.users[].login')
+
+if echo "$REVIEWERS" | grep -q "copilot-pull-request-reviewer"; then
+  echo "Copilot review successfully requested on PR #${PR_NUMBER}"
+else
+  echo "WARNING: Copilot review request may have failed" &gt;&amp;2
+  exit 1
+fi</code></pre>
+
+      <p>That verification step matters more than you'd expect. Because the POST returns a success status regardless of whether the reviewer name was valid, the only way to confirm the request went through is to check the PR's reviewer list after the fact.</p>
+
+      <h2>Wrapping Up</h2>
+
+      <p>Copilot code review is a useful tool for getting fast, automated feedback on pull requests. However, the API surface for triggering it programmatically has real rough edges &mdash; particularly the silent failure behavior, which violates the principle of least astonishment and turns simple debugging into guesswork. Until GitHub improves the error handling here, the essential detail to remember is the bot login: <code>copilot-pull-request-reviewer[bot]</code>. Everything else follows from that.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>

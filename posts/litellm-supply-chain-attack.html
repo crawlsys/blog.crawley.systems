@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The LiteLLM Supply Chain Attack and Why Your Secrets Shouldn't Survive Boot | blog.crawley.systems</title>
+  <meta name="description" content="How ephemeral filesystem secrets via the Kubernetes Secrets Store CSI Driver reduce the blast radius of supply chain attacks like the LiteLLM PyPI compromise.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="article-hero">
+    <div class="hero__grid-bg"></div>
+    <div class="hero__noise"></div>
+    <div class="article-hero__inner">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-03-25</span>
+        <span class="post-card__tags">
+          <span class="tag">security</span>
+          <span class="tag">kubernetes</span>
+          <span class="tag">supply-chain</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">The LiteLLM Supply Chain Attack and Why Your Secrets Shouldn't Survive Boot</h1>
+      <p class="article-hero__subtitle">Yesterday's PyPI compromise of LiteLLM harvested every credential it could find on disk. Here's how ephemeral filesystem secrets reduce the blast radius of exactly this class of attack.</p>
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>Yesterday, March 24, 2026, a threat actor group calling themselves <strong>TeamPCP</strong> published two malicious versions of LiteLLM to PyPI. If you're running LiteLLM in production (and a lot of people are, since it's the most popular LLM proxy gateway in the Python ecosystem), you need to understand what happened, what it took, and why the architecture decisions you made six months ago just became the most important factor in your incident response.</p>
+
+      <p>In this post I'll break down the attack, then walk through the strategies I use to limit the damage from exactly this class of compromise: ephemeral filesystem secrets via the Kubernetes Secrets Store CSI Driver, the case against environment variables as secret storage, honeypot credentials for detection, and network-level blast radius containment.</p>
+
+      <h2>What Actually Happened</h2>
+
+      <p><em>Already know the details? <a href="#the-pattern-we-keep-ignoring">Skip to the analysis.</a></em></p>
+
+      <p>TeamPCP didn't hack LiteLLM directly. They compromised the supply chain <em>upstream</em> of LiteLLM by first poisoning Aqua Security's Trivy scanner, a widely trusted open-source vulnerability scanning tool, back on March 1st. LiteLLM's CI/CD pipeline installed Trivy without version pinning:</p>
+
+      <pre><code><span class="code-label">ci_cd/security_scans.sh</span>
+# This is what got them owned
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+trivy fs --exit-code 1 .</code></pre>
+
+      <p>The poisoned Trivy binary ran during CI, harvested the pipeline's environment variables (including <strong>PyPI upload credentials</strong>), and exfiltrated them. On March 23rd, the attackers registered the lookalike domain <code>litellm.cloud</code> (the legitimate site is <code>litellm.ai</code>). By 08:30 UTC on March 24th, two malicious packages were live on PyPI:</p>
+
+      <ul>
+        <li><strong>v1.82.7</strong> - Payload injected into <code>litellm/proxy/proxy_server.py</code>, triggered on importing <code>litellm.proxy</code></li>
+        <li><strong>v1.82.8</strong> - Payload delivered via <code>litellm_init.pth</code>, triggered on <em>any Python startup</em>. You didn't even need to import litellm. If it was installed in the environment, it ran.</li>
+      </ul>
+
+      <p>Neither version existed on GitHub. The GitHub releases only reached v1.82.6.dev1. This was a pure PyPI-only attack.</p>
+
+      <h2>The Payload: A Credential Vacuum</h2>
+
+      <p>The malicious code was a three-stage credential harvester. It vacuumed up everything it could find on the filesystem:</p>
+
+      <ul>
+        <li>SSH keys (<code>~/.ssh/id_rsa</code>, <code>id_ed25519</code>, <code>config</code>)</li>
+        <li>AWS credentials (<code>~/.aws/credentials</code>, <code>~/.aws/config</code>)</li>
+        <li>GCP and Azure tokens</li>
+        <li>Docker configs</li>
+        <li>Kubernetes service account tokens and kubeconfig files</li>
+        <li><code>.env</code> files from every common application directory (<code>/home</code>, <code>/root</code>, <code>/opt</code>, <code>/srv</code>, <code>/var/www</code>, <code>/app</code>, <code>/data</code>)</li>
+        <li><code>credentials.json</code>, <code>secrets.json</code>, service account key files</li>
+        <li><code>/etc/shadow</code> and SSL private keys</li>
+        <li>Shell history, git configs, npm tokens, PyPI tokens</li>
+        <li>Cryptocurrency wallet data</li>
+      </ul>
+
+      <p>Everything was encrypted with a random AES-256 session key, the session key encrypted with a hardcoded RSA-4096 public key, packaged into <code>tpcp.tar.gz</code>, and <code>POST</code>'d to <code>https://models.litellm.cloud/</code>.</p>
+
+      <p>The more sophisticated v1.82.8 variant went further: it deployed a Kubernetes lateral movement toolkit that spawned privileged pods across every cluster node, and installed a persistent systemd backdoor polling an external C2 for additional binaries.</p>
+
+      <div class="callout callout--danger">
+        <div class="callout__title">Impact</div>
+        <p>If you installed litellm v1.82.7 or v1.82.8 from PyPI between 08:30 UTC and ~14:00 UTC on March 24, 2026, assume every credential accessible from that environment is compromised. PyPI has quarantined the entire litellm package. Google Mandiant has been engaged.</p>
+      </div>
+
+      <h2 id="the-pattern-we-keep-ignoring">The Pattern We Keep Ignoring</h2>
+
+      <p>This is the same pattern we see over and over. The attacker gets code execution (supply chain compromise, RCE, SSRF, deserialization bug) and the first thing they do is scrape the filesystem and environment for secrets. It's the lowest-hanging fruit in the post-exploitation playbook because <em>we keep putting secrets in plaintext where any process can read them</em>.</p>
+
+      <p>The LiteLLM payload explicitly targeted:</p>
+
+      <ul>
+        <li><code>~/.aws/credentials</code> - long-lived IAM access keys sitting in INI files</li>
+        <li><code>.env</code> files - the universal "dump everything here" pattern</li>
+        <li><strong>Environment variables via <code>printenv</code></strong> - the payload ran a raw <code>printenv</code> and captured the entire output. If you're injecting secrets as environment variables (the approach Kubernetes recommends by default with <code>secretKeyRef</code>, and the approach most 12-factor apps use), every one of those secrets was captured by a single shell command.</li>
+        <li>Kubernetes Secrets - base64-encoded (not encrypted) in etcd by default</li>
+        <li>Service account key files - JSON files with permanent credentials</li>
+      </ul>
+
+      <p>Environment variables deserve special attention here because they're the mechanism most operators reach for first. The Twelve-Factor App methodology popularized <code>ENV</code> as the canonical way to inject configuration, and Kubernetes' <code>envFrom</code> makes it trivially easy. But environment variables are <strong>visible to every process in the container</strong>, trivially dumped by any subprocess via <code>printenv</code> or <code>/proc/&lt;pid&gt;/environ</code>, and frequently leaked into logs, crash dumps, and error reporters. Stop treating them as secret storage.</p>
+
+      <p>Every one of these (flat files, env vars, base64-encoded K8s Secrets) is readable by any process with basic access. The attack doesn't need to be sophisticated. It just needs <code>cat</code> and <code>printenv</code>.</p>
+
+      <h2>Ephemeral Secrets: Making the Attacker's Job Harder</h2>
+
+      <p>This is the problem I built <a href="https://github.com/kvncrw/bitwarden-csi-provider" target="_blank" rel="noopener">bitwarden-csi-provider</a> to solve. It's an open-source Rust implementation of the Kubernetes Secrets Store CSI Driver spec that I wrote and maintain. It pulls secrets from <a href="https://bitwarden.com/products/secrets-manager/" target="_blank" rel="noopener">Bitwarden Secrets Manager</a> directly into pods as tmpfs-mounted files. The critical difference from standard Kubernetes Secrets:</p>
+
+      <ol>
+        <li><strong>Secrets never touch etcd.</strong> They're fetched from Bitwarden at pod initialization and mounted directly into the pod's tmpfs filesystem. There's no Kubernetes Secret object to <code>kubectl get secret -o json</code>.</li>
+        <li><strong>Secrets exist only in volatile memory.</strong> tmpfs lives in RAM. When the pod dies, the secrets vanish. There's no PersistentVolume with your API keys sitting on a disk somewhere.</li>
+        <li><strong>The application can purge the file after loading.</strong> This is the key architectural decision. Your application reads the secret into memory at startup, then the file is deleted from the tmpfs mount. The window during which the secret is readable from the filesystem is measured in milliseconds.</li>
+      </ol>
+
+      <pre><code><span class="code-label">SecretProviderClass</span>
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: my-app-secrets
+spec:
+  provider: bitwarden
+  parameters:
+    secrets: |
+      - id: "bf3a92e1-4c67-4d0a-9f8e-1a2b3c4d5e6f"
+        path: "api-key"
+      - id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        path: "database-url"</code></pre>
+
+      <pre><code><span class="code-label">Pod spec</span>
+volumes:
+  - name: secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "my-app-secrets"
+      nodePublishSecretRef:
+        name: bsm-access-token</code></pre>
+
+      <p>At pod init, the CSI driver calls my provider via gRPC. The provider authenticates to <a href="https://bitwarden.com/products/secrets-manager/" target="_blank" rel="noopener">Bitwarden Secrets Manager</a>, fetches the requested secrets, and writes them to the tmpfs mount. The application reads the files directly into its own memory at startup, then the files are purged:</p>
+
+      <pre><code><span class="code-label">entrypoint.sh</span>
+#!/bin/sh
+# Start the application - it reads secrets from /mnt/secrets at init
+# then purge the files from the filesystem
+exec "$@" &
+APP_PID=$!
+
+# Give the app time to read secrets into memory, then destroy the files
+sleep 2
+rm -f /mnt/secrets/*
+wait $APP_PID</code></pre>
+
+      <div class="callout callout--warning">
+        <div class="callout__title">Don't export secrets to ENV</div>
+        <p>You might be tempted to <code>export API_KEY=$(cat /mnt/secrets/api-key)</code> in your entrypoint. Don't. As we just discussed, the LiteLLM payload ran <code>printenv</code> and captured every environment variable in a single command. Environment variables are trivially readable by any child process, leaked into crash dumps, and visible via <code>/proc/&lt;pid&gt;/environ</code>. The entire point of ephemeral file-based secrets is to keep them out of the environment. Your application should read the file directly into its own heap memory and hold it there.</p>
+      </div>
+
+      <p>After that <code>rm</code>, there's nothing on the filesystem to steal. The secrets exist only in the application's process memory. An attacker would need to attach a debugger or read <code>/proc/&lt;pid&gt;/mem</code>, both of which are preventable with seccomp profiles and <code>ptrace</code> restrictions, and both significantly noisier than running <code>cat</code> on a flat file.</p>
+
+      <h2>What This Stops (and What It Doesn't)</h2>
+
+      <p>Let's be precise about the threat model. Against the LiteLLM payload specifically, this architecture eliminates:</p>
+
+      <ul>
+        <li><strong>Filesystem credential scraping</strong> - no <code>.env</code> files, no <code>credentials.json</code>, no <code>~/.aws/credentials</code> to harvest. The payload's <code>find / -name "*.env"</code> returns nothing.</li>
+        <li><strong>Kubernetes Secret exfiltration</strong> - no K8s Secret objects to query from a compromised service account, because secrets never materialized as K8s resources.</li>
+        <li><strong>Persistent credential exposure</strong> - if the pod restarts, new credentials are fetched. If the old credentials were compromised, rotating them in Bitwarden immediately invalidates any stolen copies.</li>
+      </ul>
+
+      <p>What it <em>doesn't</em> stop:</p>
+
+      <ul>
+        <li><strong>Memory scraping</strong> - an attacker with sufficient privileges can still read process memory via <code>/proc/&lt;pid&gt;/mem</code> or by attaching a debugger. This requires elevated access and is significantly noisier than reading flat files. Seccomp profiles and <code>ptrace</code> restrictions can block this entirely.</li>
+        <li><strong>Network-level exfiltration</strong> - if your application makes API calls with the loaded credentials, an attacker who controls the routing or DNS could intercept them in transit. mTLS and egress policies mitigate this.</li>
+      </ul>
+
+      <p>It's worth noting what the LiteLLM payload <em>actually did</em>: it spawned external subprocesses (<code>subprocess.Popen</code>) that ran shell commands (<code>printenv</code>, <code>cat</code>, <code>find</code>, <code>curl</code>, <code>openssl</code>) to scrape the filesystem and environment. It did <strong>not</strong> perform in-process Python interception, monkeypatch <code>os.environ</code>, or hook API client calls at the runtime level. This was a brute-force filesystem and environment vacuum, not a sophisticated runtime attack. That distinction matters: ephemeral file-based secrets with no env var leakage directly defeats this specific payload's collection mechanism.</p>
+
+      <p>This is not a silver bullet. Nothing is. But it dramatically reduces the <strong>initial blast radius</strong>. Instead of every credential on the system being harvestable by <code>printenv</code> and a recursive <code>find</code>, the attacker would need to read a specific process's heap memory during a specific window. That's a fundamentally harder problem, and a fundamentally more detectable one.</p>
+
+      <h2>Defense in Depth: SIEM, Honeypots, and Detection</h2>
+
+      <p>The combination I run:</p>
+
+      <h3>Honeypot credentials</h3>
+
+      <p>Plant fake <code>.env</code> files, <code>~/.aws/credentials</code>, and <code>credentials.json</code> files with honeypot credentials that alert on use. These are credentials that look real but point to monitored endpoints. When the LiteLLM payload (or any credential harvester) scrapes them and tries to use them, you get an immediate alert.</p>
+
+      <pre><code><span class="code-label">~/.aws/credentials (honeypot)</span>
+[default]
+aws_access_key_id = AKIA5XXXXXXXXXDETECT
+aws_secret_access_key = wJalrXXXXXXXXXXXXXXX/bPxRfiHONEYPOT+KEY</code></pre>
+
+      <p>The technique is straightforward: create a dummy IAM user with <strong>no permissions</strong>, generate access keys for it, and plant those keys in your honeypot files. Then set up a <a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-create-and-update-a-trail.html" target="_blank" rel="noopener">CloudTrail</a> metric filter and CloudWatch alarm that fires on any API call authenticated with that user's credentials. When a credential harvester like the LiteLLM payload scrapes your fake <code>~/.aws/credentials</code> and tries to use them, you get an immediate alert. The setup takes fifteen minutes, costs nothing, and gives you a high-fidelity tripwire with virtually zero false positives. If you're not doing this, start today.</p>
+
+      <h3>SIEM alerting on secret access patterns</h3>
+
+      <p>Monitor for processes reading credential files that shouldn't be reading them. <code>auditd</code> rules on sensitive paths, Falco rules for unexpected file access in containers, and network egress alerts for connections to unknown endpoints. The LiteLLM payload made outbound HTTPS connections to <code>litellm.cloud</code>. Egress filtering and DNS monitoring would have flagged this immediately.</p>
+
+      <h3>Network policies as blast radius containment</h3>
+
+      <p>Kubernetes NetworkPolicies should restrict egress to known endpoints. If your LLM proxy pod only needs to talk to OpenAI's API, it shouldn't be able to POST encrypted tarballs to arbitrary domains. This is basic hygiene that most clusters still don't implement.</p>
+
+      <h2>The Bigger Picture</h2>
+
+      <p>The LiteLLM attack is a case study in how modern supply chain compromises actually work. It wasn't a sophisticated zero-day. It was:</p>
+
+      <ol>
+        <li>Compromise an upstream dependency (Trivy)</li>
+        <li>Harvest CI/CD credentials from the target project</li>
+        <li>Publish malicious packages to the package registry</li>
+        <li>Scrape every secret off the filesystem of every machine that installs your package</li>
+      </ol>
+
+      <p>Step 4 is where the damage happens, and it's where your architecture decisions determine whether the attacker gets your production database credentials or an empty directory.</p>
+
+      <p>The supply chain problem isn't going away. Package registries are high-value targets precisely because they're trusted implicitly by CI/CD pipelines and production deployments. You can't prevent every compromise upstream. What you can control is how much damage a compromised dependency can do once it's running in your environment.</p>
+
+      <p>Ephemeral secrets aren't exotic. The Secrets Store CSI Driver is a CNCF project. <a href="https://bitwarden.com/products/secrets-manager/" target="_blank" rel="noopener">Bitwarden Secrets Manager</a> is free for small teams. I wrote <a href="https://github.com/kvncrw/bitwarden-csi-provider" target="_blank" rel="noopener">bitwarden-csi-provider</a> because this tooling should exist and be open source. It deploys as a DaemonSet and the integration takes an afternoon. The question is whether you'll adopt it before or after your credentials end up in a tarball on someone else's server.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>

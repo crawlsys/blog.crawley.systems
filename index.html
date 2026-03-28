@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>blog.crawley.systems — Engineering Notes from Production</title>
+  <meta name="description" content="Technical writing on infrastructure, security, Kubernetes, and platform engineering from Kevin Crawley.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero__grid-bg"></div>
+    <div class="hero__noise"></div>
+    <div class="hero__content">
+      <div class="hero__label">
+        <span class="hero__label-dot"></span>
+        <span class="hero__label-text">Engineering notes from production</span>
+      </div>
+      <h1 class="hero__title">
+        <span class="hero__title-line hero__title-line--1">Dispatches from</span>
+        <span class="hero__title-line hero__title-line--2">the infrastructure</span>
+        <span class="hero__title-line hero__title-line--3">trenches<span class="hero__title-cursor">_</span></span>
+      </h1>
+      <p class="hero__sub">
+        Long-form writing on security, Kubernetes, platform engineering,
+        and the operational realities of keeping production systems alive.
+      </p>
+    </div>
+  </section>
+
+  <section class="posts" id="posts">
+    <div class="posts__inner">
+      <span class="section-tag">// recent</span>
+
+      <a href="posts/sentinel-llm-siem-homelab.html" class="post-card">
+        <div class="post-card__meta">
+          <span class="post-card__date">2026-03-28</span>
+          <span class="post-card__tags">
+            <span class="tag">security</span>
+            <span class="tag">kubernetes</span>
+            <span class="tag">llm</span>
+            <span class="tag">observability</span>
+          </span>
+        </div>
+        <h2 class="post-card__title">Building an LLM-Powered SIEM That Fits in a Single File</h2>
+        <p class="post-card__excerpt">How a single Python script and an LLM endpoint can turn your Kubernetes cluster logs into actionable security intelligence. Point it at any Loki instance. No SIEM subscriptions, no per-GB ingestion fees.</p>
+        <span class="post-card__read">Read article &rarr;</span>
+      </a>
+
+      <a href="posts/copilot-code-review-programmatic.html" class="post-card">
+        <div class="post-card__meta">
+          <span class="post-card__date">2026-03-28</span>
+          <span class="post-card__tags">
+            <span class="tag">github</span>
+            <span class="tag">automation</span>
+            <span class="tag">ci-cd</span>
+          </span>
+        </div>
+        <h2 class="post-card__title">How to Trigger GitHub Copilot Code Reviews Programmatically</h2>
+        <p class="post-card__excerpt">The undocumented bot name, the silent failures, and the three working approaches for requesting Copilot code reviews from CI/CD pipelines and agentic workflows.</p>
+        <span class="post-card__read">Read article &rarr;</span>
+      </a>
+
+      <a href="posts/litellm-supply-chain-attack.html" class="post-card">
+        <div class="post-card__meta">
+          <span class="post-card__date">2026-03-25</span>
+          <span class="post-card__tags">
+            <span class="tag">security</span>
+            <span class="tag">kubernetes</span>
+            <span class="tag">supply-chain</span>
+          </span>
+        </div>
+        <h2 class="post-card__title">The LiteLLM Supply Chain Attack and Why Your Secrets Shouldn't Survive Boot</h2>
+        <p class="post-card__excerpt">Yesterday's PyPI compromise of LiteLLM harvested every credential it could find on disk. Here's how ephemeral filesystem secrets via the Kubernetes Secrets Store CSI Driver reduce the blast radius of exactly this class of attack.</p>
+        <span class="post-card__read">Read article &rarr;</span>
+      </a>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

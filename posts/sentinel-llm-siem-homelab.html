@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building an LLM-Powered SIEM for Your Homelab | blog.crawley.systems</title>
+  <meta name="description" content="How a single Python script and a local language model can turn your Kubernetes cluster logs into actionable security intelligence.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .hero-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 80vh;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-split__text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px clamp(24px, 4vw, 64px) 80px clamp(24px, 4vw, 64px);
+    }
+    .hero-split__image {
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-split__image img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      object-fit: cover;
+    }
+    .hero-split__image::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, var(--bg-primary) 0%, transparent 20%);
+    }
+    @media (max-width: 768px) {
+      .hero-split { grid-template-columns: 1fr; }
+      .hero-split__image { height: 300px; }
+      .hero-split__image::after {
+        background: linear-gradient(to top, var(--bg-primary) 0%, transparent 30%);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero-split">
+    <div class="hero-split__text">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-03-28</span>
+        <span class="post-card__tags">
+          <span class="tag">security</span>
+          <span class="tag">kubernetes</span>
+          <span class="tag">llm</span>
+          <span class="tag">observability</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">Building an LLM-Powered SIEM That Fits in a Single File</h1>
+      <p class="article-hero__subtitle">How a single Python script and a local language model can turn your Kubernetes cluster logs into actionable security intelligence.</p>
+    </div>
+    <div class="hero-split__image">
+      <img src="../sentinel-hero.png" alt="">
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>Most small teams running Kubernetes don't have security monitoring on their logs. And the reason is straightforward: traditional SIEMs like Splunk or Elastic SIEM are built for organizations that can afford six-figure contracts and staff dedicated to writing detection rules. If you're a startup with your first production cluster, a platform team running dev environments, or a lean ops group that can't justify that spend, your logs are probably flowing into Loki and sitting there unanalyzed.</p>
+
+      <p>What if a language model could do the analysis for you?</p>
+
+      <p><a href="https://github.com/kvncrw/sentinel" target="_blank" rel="noopener">Sentinel</a> is a ~550-line Python application that classifies Kubernetes cluster logs using an LLM in real time. You point it at a Loki instance and an Ollama-compatible endpoint. That's it &mdash; no SIEM subscriptions, no per-GB ingestion fees, no rule libraries to maintain. It works anywhere you have those two things running.</p>
+
+      <h2>How It Works</h2>
+
+      <p>The architecture is intentionally minimal. Every 60 seconds, Sentinel runs through a four-step cycle:</p>
+
+      <ol>
+        <li><strong>Queries Loki</strong> for log entries across configurable cluster sources (ArgoCD, kube-system, cert-manager, Cloudflare tunnels, application namespaces)</li>
+        <li><strong>Sends log batches to Ollama</strong> with source-specific context about what each component does and what threats look like</li>
+        <li><strong>Classifies each batch</strong> as SAFE, OPERATIONAL, SUSPICIOUS, or CRITICAL</li>
+        <li><strong>Fires alerts through Alertmanager</strong> with cooldown logic to prevent alert fatigue</li>
+      </ol>
+
+      <p>Why does this matter? An LLM can distinguish between a misconfiguration and an attack in ways that regex-based rules fundamentally cannot. Consider a 403 response. A traditional SIEM either alerts on every 403 (noisy) or ignores them all (blind). Sentinel evaluates the same 403 in context &mdash; a web crawler getting blocked by a news site is routine, but an unknown IP hitting 403s against your ArgoCD dashboard is a completely different signal.</p>
+
+      <h2>The Prompt Is the Rule Engine</h2>
+
+      <p>Sentinel replaces Sigma rules and Splunk queries with a structured system prompt that defines the classification taxonomy:</p>
+
+      <pre><code><span class="code-label">system prompt</span>
+VERDICTS:
+- SAFE: Normal operational noise, routine errors, expected behavior
+- OPERATIONAL: System outages, internal errors -- not attacks, but degraded
+- SUSPICIOUS: Potential security threats, auth failures from unusual sources
+- CRITICAL: Definite security breach, unauthorized access, active attack</code></pre>
+
+      <p>Every log source carries its own context block &mdash; a short description of what the component does and what to watch for. For example, Sentinel knows that ArgoCD deploying workloads is expected behavior. However, an <em>unknown user</em> creating an ArgoCD application is a red flag worth escalating.</p>
+
+      <pre><code><span class="code-label">sentinel.py</span>
+{
+    "name": "argo-security",
+    "query": '{namespace="argo-system"} |~ "(?i)(denied|unauthorized|forbidden|...)"',
+    "context": "ArgoCD GitOps controller. Can deploy arbitrary workloads to the cluster. "
+               "Watch for: unauthorized access, unexpected app creation/deletion, "
+               "sync failures from unknown sources, RBAC violations.",
+    "priority": "critical",
+}</code></pre>
+
+      <p>There's also a "known noise" section in the prompt &mdash; essentially a tuning whitelist for the LLM. CSI driver reconciliation errors, Bitwarden rate limits, transient DNS timeouts: all explicitly marked as SAFE so the model doesn't fire alerts on normal infrastructure chatter.</p>
+
+      <h2>Persistence-Based Alerting</h2>
+
+      <p>Classifying a single cycle of logs isn't enough to act on. A rolling deployment that throws errors for 30 seconds shouldn't page you at 3am, and Sentinel's persistence model ensures it won't. Verdict history is tracked in a sliding window, and alerts only fire when patterns hold across multiple cycles:</p>
+
+      <ul>
+        <li><strong>CRITICAL</strong> alerts fire immediately (but still respect cooldown)</li>
+        <li><strong>SUSPICIOUS</strong> verdicts require consecutive confirmations before alerting &mdash; a single anomalous cycle gets logged and watched, not alerted</li>
+        <li><strong>OPERATIONAL</strong> issues need sustained failures across multiple cycles before they're worth waking up for</li>
+      </ul>
+
+      <p>In practice, this eliminated the most common false positive scenario during early testing: transient errors from pod restarts and deployments that would resolve on their own within a cycle or two.</p>
+
+      <pre><code><span class="code-label">sentinel.py</span>
+def is_persistent_suspicious(self, source: str, threshold: int) -&gt; bool:
+    """Check if we have consecutive SUSPICIOUS verdicts
+    (avoid single-cycle false positives)."""
+    recent = self.get_recent(source, threshold)
+    if len(recent) &lt; threshold:
+        return False
+    return all(d["verdict"] in ("SUSPICIOUS", "CRITICAL") for d in recent)</code></pre>
+
+      <h2>DNS Security Monitoring</h2>
+
+      <p>Sentinel also monitors <a href="https://nextdns.io" target="_blank" rel="noopener">NextDNS</a> analytics for two categories of DNS-layer threats, going beyond what cluster logs alone can tell you.</p>
+
+      <p><strong>DNS bypass detection</strong> watches for abnormally high block counts in short windows. A sudden spike in blocked queries might indicate a compromised device trying to reach C2 infrastructure, or an endpoint brute-forcing its way past DNS-layer controls. Either way, you want to know about it quickly.</p>
+
+      <p><strong>Content policy monitoring</strong> checks for blocked queries matching configurable categories. When a device on your network hits a blocked domain, Sentinel fires a CRITICAL alert with the device name, IP, and domain. It's smart enough to skip cluster IPs (pods and services making DNS queries as part of normal operation), so you don't get flooded with false positives from your own workloads.</p>
+
+      <pre><code><span class="code-label">sentinel.py</span>
+# Skip cluster IPs (pods, nodes, services making DNS queries)
+if any(device_ip.startswith(prefix) for prefix in PARENTAL_IGNORE_IPS):
+    log.debug("[parental] Skipping cluster IP %s (%s) for %s",
+              device_ip, device_name, domain)
+    continue</code></pre>
+
+      <h2>Running It</h2>
+
+      <p>Sentinel ships as a single Docker container. It needs three dependencies, and if you're already running a Kubernetes observability stack, you likely have most of them:</p>
+
+      <ul>
+        <li><strong>Loki</strong> for log aggregation (you're probably already running this)</li>
+        <li><strong>Ollama</strong> with a capable model (qwen3 family works well &mdash; the 32B quantized model balances accuracy with inference speed)</li>
+        <li><strong>Alertmanager</strong> for alert routing (ships with kube-prometheus-stack)</li>
+      </ul>
+
+      <p>The resource footprint is trivial: 64Mi memory requested, 128Mi limit. All the expensive LLM inference happens on your Ollama instance, so Sentinel itself is just an orchestrator making HTTP calls on a timer.</p>
+
+      <p>A Helm chart handles the Kubernetes deployment and wires up environment variables for service URLs, polling intervals, cooldown periods, and sensitivity thresholds. Secrets (like the NextDNS API key) are injected via <a href="https://bitwarden.com/products/secrets-manager/" target="_blank" rel="noopener">Bitwarden's</a> CSI driver &mdash; the same pattern I wrote about in <a href="posts/litellm-supply-chain-attack.html">the LiteLLM post</a>.</p>
+
+      <h2>Observability</h2>
+
+      <p>An LLM-based system needs its own monitoring &mdash; you can't just trust that inference is working correctly and move on. Sentinel exposes Prometheus metrics for poll cycle duration, inference latency, verdict distribution, alert counts (sent vs. suppressed), Loki errors, and DNS block rates. A bundled Grafana dashboard puts the security posture of your cluster on a single screen.</p>
+
+      <p>Why does this matter in practice? If inference latency spikes from 5 seconds to 60 seconds, you have a detection gap. If one source keeps returning OPERATIONAL verdicts for hours, that's a reliability problem a human should look at. The metrics make both of those situations visible before they become blind spots.</p>
+
+      <h2>Tradeoffs and Limitations</h2>
+
+      <p>There are real tradeoffs here, and I think it's important to be direct about them:</p>
+
+      <ul>
+        <li><strong>Inference latency</strong> means Sentinel isn't real-time. With a 60-second poll interval plus inference time, you're looking at 1&ndash;2 minute detection windows. Adequate for most environments; not sufficient for a high-throughput SOC.</li>
+        <li><strong>LLM consistency</strong> can vary. Temperature is set to 0.1 for determinism, but the same log batch can occasionally produce different verdicts across runs. The persistence model mitigates this.</li>
+        <li><strong>No correlation across sources.</strong> Each log source is classified independently. Sentinel won't connect a cert-manager error with a simultaneous ArgoCD deployment the way a human analyst would.</li>
+        <li><strong>Model quality matters.</strong> Smaller models produce more false positives. The jump from 7B to 32B parameters noticeably improved classification accuracy in testing.</li>
+      </ul>
+
+      <h2>Why This Matters</h2>
+
+      <p>The economics of security tooling are shifting. The traditional SIEM model &mdash; pay per GB ingested, hire analysts to write rules, maintain detection logic as your environment evolves &mdash; doesn't work for small teams. In fact, it barely works for large ones.</p>
+
+      <p>An LLM-based approach inverts the cost structure entirely. Instead of encoding every possible threat pattern as a rule, you describe what your systems do and what "suspicious" means in your specific context. The model handles the pattern matching from there. When you add a new service, you add a paragraph of context to a config &mdash; not a library of detection rules that someone has to maintain indefinitely.</p>
+
+      <p>We're seeing this same pattern across infrastructure tooling: rigid, rule-based systems giving way to context-aware ones that adapt without manual intervention. Security monitoring is a particularly good fit for this shift because the signal-to-noise problem is so severe. Most log lines are noise. The hard part has always been figuring out which ones aren't.</p>
+
+      <p>If you're running Kubernetes with Loki and don't have dedicated security monitoring, give <a href="https://github.com/kvncrw/sentinel" target="_blank" rel="noopener">Sentinel</a> a look. It's open source, it deploys in minutes with Helm, and it will catch patterns your static Grafana alerts were never designed to find.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>
