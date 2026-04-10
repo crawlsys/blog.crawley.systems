@@ -12,7 +12,10 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Self-hosted ARC runner (kvncrw-crawley-systems scale set on coredump).
+    # CF API token is IP-restricted to the home network, so GitHub-hosted
+    # runners get "Cannot use the access token from location" errors.
+    runs-on: kvncrw-crawley-systems
     environment:
       name: production
       url: https://blog.crawley.systems
@@ -20,34 +23,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug CF token scope from GH runner
-        env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set +e
-          echo "=== 1. token verify ==="
-          curl -sS -o /tmp/a.json -w "http=%{http_code}\n" -H "Authorization: Bearer $CF_TOKEN" https://api.cloudflare.com/client/v4/user/tokens/verify
-          jq -c '{success, status:.result.status, errors}' /tmp/a.json
-          echo "=== 2. list accounts ==="
-          curl -sS -o /tmp/b.json -w "http=%{http_code}\n" -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts"
-          jq -c '{success, errors, count:(.result|length)}' /tmp/b.json
-          echo "=== 3. list pages projects under account ==="
-          curl -sS -o /tmp/c.json -w "http=%{http_code}\n" -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCT/pages/projects"
-          jq -c '{success, errors, count:(.result|length)}' /tmp/c.json
-          echo "=== 4. get specific pages project ==="
-          curl -sS -o /tmp/d.json -w "http=%{http_code}\n" -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCT/pages/projects/blog-crawley-systems"
-          jq -c '{success, errors}' /tmp/d.json
-          echo "=== 5. runner public IP ==="
-          curl -sS https://api.ipify.org ; echo
-
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "3.90.0"
           command: pages deploy . --project-name=blog-crawley-systems --branch=main --commit-dirty=true
