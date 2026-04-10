@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Giving Your AI Agent a Real Key to the Vault | blog.crawley.systems</title>
-  <meta name="description" content="An open-source MCP server that wraps Bitwarden Secrets Manager, giving Claude, Hermes, and every other agent in your homelab a controlled, audited path to read and write secrets — without defaulting to sh -c or leaking them through the LLM's context.">
+  <meta name="description" content="An open-source MCP server that wraps Bitwarden Secrets Manager, giving Claude, Hermes, and every other agent in your infrastructure a controlled, audited path to read and write secrets — without defaulting to sh -c or leaking them through the LLM's context.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -40,7 +40,7 @@
         </span>
       </div>
       <h1 class="article-hero__title">Giving Your AI Agent a Real Key to the Vault</h1>
-      <p class="article-hero__subtitle">A new open-source MCP server that wraps Bitwarden Secrets Manager, so Claude (or Hermes, or whoever's driving your homelab this week) gets a controlled, audited path to read and write secrets — without you teaching it how to eval shell strings.</p>
+      <p class="article-hero__subtitle">A new open-source MCP server that wraps <a href="https://bitwarden.com/products/secrets-manager/" target="_blank" rel="noopener">Bitwarden Secrets Manager</a>, so Claude (or Hermes, or whoever's driving your infrastructure this week) gets a controlled, audited path to read and write secrets — without watching your agent leak credentials through eval.</p>
     </div>
   </section>
 
@@ -60,11 +60,10 @@
       <ul>
         <li><strong>Dump secrets into the agent's shell</strong> via <code>env</code> before you start the session. Now every command the agent runs has access to everything. Blast radius: everything the token can touch. If the agent tool-calls a subprocess that logs its environment, your secrets go to the LLM provider's logs.</li>
         <li><strong>Pre-materialize a <code>.env</code> file</strong> the agent can read. Same problem, worse, because now there's a persistent flat file sitting on disk — exactly the thing the litellm payload vacuumed up.</li>
-        <li><strong>Tell the agent to shell out to <code>bws</code> directly</strong>, via a generic "run a terminal command" tool. Now you've given the LLM an eval primitive into your secrets CLI and you're relying on prompt engineering to keep it from doing something stupid. Works until it doesn't.</li>
-        <li><strong>Build a custom per-secret integration</strong> for every agent platform you use. Ridiculous, doesn't scale, I refuse.</li>
+        <li><strong>Give the agent a generic "run a terminal command" tool</strong> and let it shell out to <code>bws</code> on demand. Whatever scope your system prompt nominally enforces, the actual tool surface is the entire Unix userland — your secrets, sure, but also <code>rm -rf</code>, <code>curl | sh</code>, <code>kubectl</code>, anything else on <code>PATH</code>. You're one prompt injection away from a bad day, and you're relying on prompt engineering as the load-bearing safety mechanism. Works until it doesn't.</li>
       </ul>
 
-      <p>The Model Context Protocol is supposed to be the answer to this class of problem. And it nearly is — the official <a href="https://github.com/bitwarden/mcp-server" target="_blank" rel="noopener">bitwarden/mcp-server</a> wraps Bitwarden's <em>password manager</em> vault in an MCP, so Claude Desktop can retrieve saved logins for you. Which is great for personal passwords. But Bitwarden has two distinct vaults — the consumer password manager (<code>bw</code>) and the server-side Secrets Manager (<code>bws</code>) — and the official MCP only covers the first one. For the homelab and infrastructure use case, which is the whole reason I run Bitwarden Secrets Manager in the first place, there's no MCP at all.</p>
+      <p>The Model Context Protocol is supposed to be the answer to this class of problem. And it nearly is — the official <a href="https://github.com/bitwarden/mcp-server" target="_blank" rel="noopener">bitwarden/mcp-server</a> wraps Bitwarden's <em>password manager</em> vault in an MCP, so Claude Desktop can retrieve saved logins for you. Which is great for personal passwords. But Bitwarden has two distinct vaults — the consumer password manager (<code>bw</code>) and the server-side Secrets Manager (<code>bws</code>) — and the official MCP only covers the first one. For the server-side infrastructure use case, which is the whole reason I run Bitwarden Secrets Manager in the first place, there's no MCP at all.</p>
 
       <p>So I wrote one. It's called <a href="https://github.com/kvncrw/bws-mcp-server" target="_blank" rel="noopener">bws-mcp-server</a>, it's on GitHub under GPL-3.0, and this post walks through what it does, the design decisions that made it (two of which I had to learn the hard way during the build), and why the test suite was the most interesting part of the project.</p>
 
@@ -85,7 +84,7 @@
 
       <p>Three tools are marked destructive and gated behind a mandatory <code>confirm: true</code> parameter: <code>bws_project_delete</code>, <code>bws_secret_delete</code>, and <code>bws_run</code>. If the agent calls one of these without explicitly setting <code>confirm</code>, the handler short-circuits with a structured error before any validation or subprocess work happens. This is the same pattern the upstream <code>bitwarden/mcp-server</code> uses for vault deletes, and it's the only pattern I've found that plays well with both Claude Desktop's human-in-the-loop approval UI and the more autonomous agent runtimes like Hermes that do their own policy gating.</p>
 
-      <p>Is a <code>confirm: true</code> flag a safety net? No. The model can absolutely set it to true if you tell it to. It's a <em>policy gate</em> — a mechanism to force the destructive intent to the surface on every single call, so your approval tooling has something to hook into. The alternative is having to pattern-match tool call arguments to figure out which calls are dangerous, and that's a rabbit hole I'd rather not start digging.</p>
+      <p>The <code>confirm: true</code> flag isn't a safety net — the model will happily set it to true if you tell it to. Its job is to force destructive intent to the surface on every single call, so your approval tooling has something to hook into. The alternative is having to pattern-match tool call arguments to figure out which calls are dangerous, and that's a rabbit hole I'd rather not start digging.</p>
 
       <h2>Wrapping the CLI, Not the SDK</h2>
 
@@ -119,7 +118,7 @@ const result = await spawnBws(config, [
 
       <p>That's the naive shape. The agent passes a string like <code>"psql -c 'SELECT count(*) FROM users'"</code>, the server wraps it in <code>sh -c</code>, <code>bws</code> launches the child with the secrets injected, and the agent gets back stdout, stderr, and exit code. Clean, simple, matches what most humans do at the command line.</p>
 
-      <p>It's also a remote code execution primitive into your homelab the moment you let an LLM call it.</p>
+      <p>It's also a remote code execution primitive into your infrastructure the moment you let an LLM call it.</p>
 
       <p>Here's the problem. An MCP tool that accepts a free-form shell string and pipes it to <code>sh -c</code> is, by definition, an eval surface. The agent can construct <em>any command</em>, nested pipes, subshells, process substitution, redirections, glob expansion, command substitution — all of it — and hand it to you. You then execute it with a process environment populated from your secrets vault. The access token doesn't need to authorize anything clever; the agent already has <code>sh</code>.</p>
 
@@ -179,11 +178,11 @@ const result = await runWithSecrets(config, {
 
       <ol>
         <li><strong>Unit tests</strong> (<code>tests/unit/</code>) — pure functions only. Argv builders, stdout parsers, schema validation, error mapping, env loading. Zero external dependencies, run in about a second, always green for any contributor. These are fine, they just don't catch much.</li>
-        <li><strong>Protocol E2E tests</strong> (<code>tests/protocol/</code>) — spawn the actual built MCP server as a subprocess, send real JSON-RPC messages over stdio, assert on the responses. The tricky part is that the server shells out to <code>bws</code>, and the GitHub Actions runner doesn't have <code>bws</code> installed. Solution: the test harness writes a small stub shell script named <code>bws</code> that echoes canned JSON for each subcommand, prepends its directory to <code>PATH</code>, and spawns the MCP server with that <code>PATH</code>. The server has no idea it's talking to a stub — it's a real <code>execve()</code> of a real binary that happens to behave predictably. This is not a mock. It's a controlled peer.</li>
+        <li><strong>Protocol E2E tests</strong> (<code>tests/protocol/</code>) — spawn the actual built MCP server as a subprocess, send real JSON-RPC messages over stdio, assert on the responses. The tricky part is that the server shells out to <code>bws</code>, and the GitHub Actions runner doesn't have <code>bws</code> installed. Solution: the test harness writes a small stub shell script named <code>bws</code> that echoes canned JSON for each subcommand, prepends its directory to <code>PATH</code>, and spawns the MCP server with that <code>PATH</code>. The server has no idea it's talking to a stub — it's a real <code>execve()</code> of a real binary that happens to behave predictably.</li>
         <li><strong>Integration tests</strong> (<code>tests/integration/</code>) — exec the real <code>bws</code> binary against a real Bitwarden Secrets Manager project, create secrets and projects with unique prefixes per run, verify every round-trip (create → get → edit → list → delete), clean up in <code>afterEach</code>. Gated behind <code>BWS_ACCESS_TOKEN_TEST</code> and <code>BWS_TEST_PROJECT_ID</code> env vars. Contributors without a Bitwarden account see them skip with a clear log message; contributors with access run them; CI runs them against a dedicated test project on the main branch and on manual workflow dispatch.</li>
       </ol>
 
-      <p>I shipped v0.1.0 with seventy-one unit and protocol tests passing. Then I ran the integration suite against a real BSM project for the first time. Three out of four tests failed, and they were the most useful thirty minutes of the entire project.</p>
+      <p>I pushed v0.1.0 with seventy-one unit and protocol tests passing. Then I ran the integration suite against a real BSM project for the first time. Three out of four tests failed, and they were the most useful thirty minutes of the entire project.</p>
 
       <h3>Bug one: <code>bws secret delete</code> returns plain text</h3>
 
@@ -266,7 +265,7 @@ bws --version</code></pre>
 
       <h2>What's Missing</h2>
 
-      <p>This is a v0.1.0 release. It covers the working happy path for the core operations, and I've been using it in my homelab for real work this week. It is not feature-complete, and I want to be honest about the gaps rather than have you discover them.</p>
+      <p>This is a v0.1.0 release. It covers the working happy path for the core operations, and I've been running it against real secrets this week. It is not feature-complete, and I want to be honest about the gaps rather than have you discover them.</p>
 
       <ul>
         <li><strong>No retry-with-backoff on transient BSM 5xx</strong>. Bitwarden's hosted API occasionally returns <code>500 Internal Server Error</code> on otherwise valid requests. The MCP server surfaces those straight to the caller right now. <a href="https://github.com/kvncrw/bws-mcp-server/issues/1" target="_blank" rel="noopener">Issue #1</a> tracks the fix.</li>
@@ -274,7 +273,7 @@ bws --version</code></pre>
         <li><strong>Self-hosted Bitwarden (Vaultwarden) is untested</strong>. The <code>BWS_SERVER_URL</code> passthrough should work — it's forwarded as an environment variable to <code>bws</code> — but I don't have a Vaultwarden instance with Secrets Manager enabled, so I can't confirm it end-to-end. <a href="https://github.com/kvncrw/bws-mcp-server/issues/2" target="_blank" rel="noopener">Issue #2</a> is a call for someone in the self-hosted crowd to help me close the loop here.</li>
       </ul>
 
-      <p>None of these are blocking for homelab or personal use. Most of them are the kind of rough edges you only feel when you scale up, and at that point you should be contributing the fix.</p>
+      <p>None of these are blocking for day-to-day use. Most of them are the kind of rough edges you only feel when you scale up, and at that point the community benefits from the fix you've contributed.</p>
 
       <h2>Getting It</h2>
 
@@ -282,7 +281,7 @@ bws --version</code></pre>
 
       <p>npm package: <code>@kvncrw/bws-mcp-server</code> — publishing shortly, watch the GitHub releases page.</p>
 
-      <p>If you find a bug, open an issue. If you fix a bug, open a PR. If you run it against a weird environment (self-hosted Bitwarden, Windows via WSL, a Synology box, whatever) and it breaks, <em>especially</em> open an issue — those are the reports that turn a useful homelab tool into a useful everywhere tool.</p>
+      <p>If you find a bug, open an issue. If you fix a bug, open a PR. If you run it against a weird environment (self-hosted Bitwarden, Windows via WSL, a Synology box, whatever) and it breaks, <em>especially</em> open an issue — those are the reports that turn a working tool into one that works everywhere.</p>
 
       <p>And if you're still handing your agent secrets via <code>.env</code> files: this is the graceful exit ramp.</p>
 
