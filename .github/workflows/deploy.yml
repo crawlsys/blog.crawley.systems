@@ -20,6 +20,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug secret fingerprints
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo -n "$CF_TOKEN" | sha256sum | head -c 16 ; echo " token-sha16"
+          echo -n "$CF_ACCT"  | sha256sum | head -c 16 ; echo " acct-sha16"
+          echo "token-len=${#CF_TOKEN} acct-len=${#CF_ACCT}"
+          curl -sS -o /tmp/verify.json -w "verify-http=%{http_code}\n" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            https://api.cloudflare.com/client/v4/user/tokens/verify
+          jq '.success,.result.status' /tmp/verify.json
+          curl -sS -o /tmp/proj.json -w "proj-http=%{http_code}\n" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCT/pages/projects/blog-crawley-systems"
+          jq '.success,.errors' /tmp/proj.json
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         env:
