@@ -203,14 +203,14 @@ spec:
       <p>If I were walking into a team cold after this incident, I would not start with a six-week architecture program. I would ship the boring controls first.</p>
 
       <ol>
-        <li><strong>Today:</strong> set <code>ignore-scripts=true</code> in CI and add a reviewed rebuild wrapper for the handful of packages that need lifecycle scripts.</li>
-        <li><strong>This week:</strong> put CI behind an internal npm proxy and point every pipeline at it.</li>
-        <li><strong>Next:</strong> apply default-deny egress to CI runners, allowing DNS, the internal registry, and required internal services.</li>
-        <li><strong>Then:</strong> enable newly seen domain blocking or logging for developer egress.</li>
-        <li><strong>Finally:</strong> add process-aware detection for install-time outbound writes, GitHub workflow injection, and unexpected package publishes.</li>
+        <li><strong>Today:</strong> set <code>ignore-scripts=true</code> and <code>min-release-age=3</code> in CI. Add the reviewed rebuild wrapper for the handful of packages that actually need lifecycle scripts.</li>
+        <li><strong>This week:</strong> put CI behind an internal npm proxy, point every pipeline at it, and make the proxy the only registry path CI can use.</li>
+        <li><strong>Next:</strong> apply default-deny egress to CI runners. Allow DNS, the internal registry, and required internal services. Do not allow general GitHub, npmjs.org, or arbitrary HTTPS during dependency installation.</li>
+        <li><strong>Then:</strong> enable newly seen domain blocking or logging for developer egress, because laptops will always be messier than CI.</li>
+        <li><strong>Finally:</strong> add process-aware detection for install-time outbound writes, GitHub workflow injection, unexpected repository creation, and package publish attempts.</li>
       </ol>
 
-      <p>Against the Bitwarden CLI compromise, that stack changes the outcome. Lifecycle scripts disabled? The loader never runs. CI egress locked to a registry? The payload cannot exfiltrate or propagate. Domain filtering on laptops? First-contact infrastructure becomes harder to use. Payload inspection? You get evidence quickly when something slips through.</p>
+      <p>Against the Bitwarden CLI compromise, that stack changes the outcome. Lifecycle scripts disabled? The loader never runs. Release-age gating enabled? Freshly published versions stop being the default answer to a broad range or dist-tag. CI egress locked to a registry? The payload cannot exfiltrate or propagate. Domain filtering on laptops? First-contact infrastructure becomes harder to use. Payload inspection? You get evidence quickly when something slips through.</p>
 
       <p>The next npm compromise will have different filenames, different domains, and a different writeup. It will still need execution, secrets, and egress. Design around that, and you stop betting your incident response on being faster than a 93-minute window.</p>
 
