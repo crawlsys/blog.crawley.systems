@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stop Letting npm Install Talk to the Internet | blog.crawley.systems</title>
+  <meta name="description" content="The Bitwarden CLI npm compromise was live for 93 minutes. The durable defense is not another IOC feed; it is install-time egress control.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="article-hero">
+    <div class="hero__grid-bg"></div>
+    <div class="hero__noise"></div>
+    <div class="article-hero__inner">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-04-24</span>
+        <span class="post-card__tags">
+          <span class="tag">security</span>
+          <span class="tag">supply-chain</span>
+          <span class="tag">npm</span>
+          <span class="tag">ci-cd</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">Stop Letting <code>npm install</code> Talk to the Internet</h1>
+      <p class="article-hero__subtitle">The poisoned Bitwarden CLI package was live for 93 minutes. The useful lesson is not the IOC list. It is that install-time code should not have a general-purpose egress path.</p>
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>On April 22, 2026, Bitwarden briefly distributed a malicious npm package as <code>@bitwarden/cli@2026.4.0</code>. The affected window was 5:57 PM to 7:30 PM ET: ninety-three minutes, according to <a href="https://community.bitwarden.com/t/bitwarden-statement-on-checkmarx-supply-chain-incident/96127" target="_blank" rel="noopener">Bitwarden's statement</a>. Bitwarden says the issue was limited to the npm delivery path for the CLI, not vault data, production systems, browser extensions, or the normal Bitwarden product line.</p>
+
+      <p>That scope matters. This was not "Bitwarden vaults were breached." It was worse in a narrower, more operationally interesting way: a trusted developer tool became an install-time credential harvester. If a developer workstation or CI runner pulled that version during the window, the interesting question is not whether the password vault was safe. The question is what that host could read, and where it was allowed to send it.</p>
+
+      <p><a href="https://socket.dev/blog/bitwarden-cli-compromised" target="_blank" rel="noopener">Socket's writeup</a> and <a href="https://safedep.io/bitwarden-cli-supply-chain-compromise/" target="_blank" rel="noopener">SafeDep's analysis</a> describe the same basic shape: a loader executed during install, bootstrapped Bun, ran an obfuscated payload, harvested developer and CI secrets, and exfiltrated them to infrastructure impersonating Checkmarx. It also had fallback paths through GitHub and propagation logic for npm packages when it found publish credentials.</p>
+
+      <div class="callout callout--danger">
+        <div class="callout__title">The Real Boundary</div>
+        <p>An npm install step should download packages from a registry. It should not be able to POST encrypted blobs to arbitrary hosts, create GitHub repositories, inject workflows, or publish packages just because a transitive dependency got code execution.</p>
+      </div>
+
+      <figure class="article-figure">
+        <img src="../npm-install-egress-gateway.png" alt="A CI package conveyor passing through a controlled network gateway while outbound paths are blocked at the boundary." />
+      </figure>
+
+      <h2>What Actually Ran</h2>
+
+      <p>The package was not subtle in its goals. Researchers reported collection paths for npm tokens, GitHub tokens, SSH keys, cloud credentials, shell history, <code>.env</code> files, Git credentials, and AI tool configuration. That last bucket is no longer a footnote. Files like <code>~/.claude.json</code>, MCP configs, Cursor state, and other agent wiring often contain long-lived tokens or point at services that do.</p>
+
+      <p>The payload did not need a kernel exploit. It needed the same three things every install-time supply-chain payload wants:</p>
+
+      <ol>
+        <li><strong>Execution</strong> through npm lifecycle hooks.</li>
+        <li><strong>Reachable secrets</strong> on the filesystem or in the process environment.</li>
+        <li><strong>Outbound network</strong> to carry the loot away or extend the compromise.</li>
+      </ol>
+
+      <p>Most remediation guidance starts with rotation, and it should. If you installed the malicious version, rotate exposed GitHub, npm, SSH, cloud, CI, and agent credentials. But rotation is cleanup. The durable control is breaking at least one link in that chain before the next poisoned package shows up.</p>
+
+      <h2>Start With Lifecycle Scripts</h2>
+
+      <p>The highest-leverage change is also the least glamorous:</p>
+
+      <pre><code><span class="code-label">CI default</span>
+npm config set ignore-scripts true</code></pre>
+
+      <p>That single setting disables <code>preinstall</code>, <code>install</code>, <code>postinstall</code>, and the rest of npm's lifecycle hook surface. It is not free. Some packages need scripts for native builds or binary downloads: <code>sharp</code>, <code>esbuild</code>, <code>bcrypt</code>, and friends. Good. Make those exceptions explicit.</p>
+
+      <pre><code><span class="code-label">Reviewed install wrapper</span>
+npm ci --ignore-scripts
+npm rebuild sharp esbuild</code></pre>
+
+      <p>That is a much better failure mode than "every package in the graph may run code during install." New package needs scripts? It gets a line in the wrapper and a code review. The friction is the control.</p>
+
+      <h2>Then Remove Ambient Egress</h2>
+
+      <p>CI runners should not reach the public internet during dependency installation. They should reach DNS, your internal package proxy, and whatever internal services the build actually requires. Everything else should fail closed.</p>
+
+      <p>Put Verdaccio, Artifactory, Nexus, or another registry proxy in front of npm. Point CI at it. Cache known-good packages there. Quarantine bad versions there. Audit every package pull there. Then make the network agree with the policy.</p>
+
+      <pre><code><span class="code-label">.npmrc</span>
+registry=https://npm.internal.example.com/
+ignore-scripts=true</code></pre>
+
+      <pre><code><span class="code-label">CI runner egress shape</span>
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ci-runner-egress
+  namespace: ci
+spec:
+  podSelector:
+    matchLabels:
+      role: ci-runner
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: package-registry
+      ports:
+        - protocol: TCP
+          port: 443</code></pre>
+
+      <p>A malicious <code>postinstall</code> in that environment has a boring day. It can try to read files. It can try to open a socket. The socket goes nowhere. If it wants GitHub, npmjs.org, a lookalike telemetry domain, or a random IP, it gets a timeout instead of a credential dump.</p>
+
+      <h2>Use Domain Filtering as a Backstop</h2>
+
+      <p>Developer laptops are harder. People need browsers, docs, package managers, cloud consoles, weird vendor portals, and the occasional brand-new SaaS tool. You probably cannot give every laptop the same default-deny egress policy you give CI.</p>
+
+      <p>That is where DNS and secure web gateway controls earn their keep. Block newly seen domains in enforcement mode where you can. Run them in log-only mode where the false-positive cost is still unknown. The exact signal varies by provider: some use registration age, some use first-seen age, and some use a reputation category. The point is not purity. The point is to make first-contact exfiltration noisy or impossible.</p>
+
+      <p>For this incident, the primary endpoint was <code>audit.checkmarx.cx</code>, a Checkmarx lookalike under a different TLD. Even if a domain-age rule missed it, a "new destination from npm/node during install" rule should not.</p>
+
+      <h2>Inspect Payloads, But Do Not Lead With It</h2>
+
+      <p>Payload inspection is useful as a detective layer. Envoy access logs, an eBPF sensor, Tetragon, a commercial EDR, or a proxy that records process lineage can all answer the question that matters: why is <code>node</code> or <code>npm</code> sending outbound data during install?</p>
+
+      <p>Alert on the shape, not only the IOC:</p>
+
+      <ul>
+        <li><code>node</code>, <code>npm</code>, <code>yarn</code>, or <code>pnpm</code> sending non-trivial outbound bytes outside the registry path.</li>
+        <li>POST or PUT requests to destinations that have no history with that runner.</li>
+        <li>High-entropy request bodies or long encoded query strings from build steps.</li>
+        <li>Unexpected GitHub repository creation, workflow changes, or artifact access after an install.</li>
+      </ul>
+
+      <p>Do not make this your first wall. Attackers can slow-drip data, use trusted destinations, or shape traffic to look less suspicious. Payload inspection tells you something got past the outer controls. Egress restriction prevents the easy win.</p>
+
+      <h2>MCP Configs Are Secrets Now</h2>
+
+      <p>The most important new wrinkle is the agent tooling. The Bitwarden payload reportedly looked for Claude, MCP, Cursor, Kiro, Codex, and related configuration. That is exactly what I would expect the next wave to do.</p>
+
+      <figure class="article-figure">
+        <img src="../agent-config-vault.png" alt="Agent configuration files stored in a vault drawer with abstract connections to cloud and CI systems." />
+      </figure>
+
+      <p>Agent configs are not harmless preferences. They often contain bearer tokens, local service endpoints, cloud account mappings, GitHub auth, Slack bot tokens, and enough context to make a stolen credential immediately useful. Treat them like SSH keys:</p>
+
+      <ul>
+        <li>Keep long-lived tokens out of config files where possible.</li>
+        <li>Scope MCP credentials to the smallest project or service boundary that works.</li>
+        <li>Rotate agent-facing tokens after any workstation or CI compromise.</li>
+        <li>Prefer vault-backed tools over flat files and environment dumps.</li>
+      </ul>
+
+      <p>This connects directly to the earlier Bitwarden Secrets Manager work. The goal is not "agents never touch secrets." That is not how real infrastructure work happens anymore. The goal is that an agent gets a narrow, audited path to the secret it needs, and a poisoned install script does not get to inherit the same power by accident.</p>
+
+      <h2>The Rollout I Would Actually Ship</h2>
+
+      <p>If I were walking into a team cold after this incident, I would not start with a six-week architecture program. I would ship the boring controls first.</p>
+
+      <ol>
+        <li><strong>Today:</strong> set <code>ignore-scripts=true</code> in CI and add a reviewed rebuild wrapper for the handful of packages that need lifecycle scripts.</li>
+        <li><strong>This week:</strong> put CI behind an internal npm proxy and point every pipeline at it.</li>
+        <li><strong>Next:</strong> apply default-deny egress to CI runners, allowing DNS, the internal registry, and required internal services.</li>
+        <li><strong>Then:</strong> enable newly seen domain blocking or logging for developer egress.</li>
+        <li><strong>Finally:</strong> add process-aware detection for install-time outbound writes, GitHub workflow injection, and unexpected package publishes.</li>
+      </ol>
+
+      <p>Against the Bitwarden CLI compromise, that stack changes the outcome. Lifecycle scripts disabled? The loader never runs. CI egress locked to a registry? The payload cannot exfiltrate or propagate. Domain filtering on laptops? First-contact infrastructure becomes harder to use. Payload inspection? You get evidence quickly when something slips through.</p>
+
+      <p>The next npm compromise will have different filenames, different domains, and a different writeup. It will still need execution, secrets, and egress. Design around that, and you stop betting your incident response on being faster than a 93-minute window.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>
