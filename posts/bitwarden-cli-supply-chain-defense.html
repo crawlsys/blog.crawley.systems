@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stop Letting npm Install Talk to the Internet | blog.crawley.systems</title>
-  <meta name="description" content="The Bitwarden CLI npm compromise was live for 93 minutes. The durable defense is not another IOC feed; it is install-time egress control.">
+  <meta name="description" content="For 93 minutes, npm install @bitwarden/cli was the breach. The durable defense is CI egress control, not a faster IOC feed.">
   <meta name="robots" content="noindex">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,14 +40,16 @@
         </span>
       </div>
       <h1 class="article-hero__title">Stop Letting <code>npm install</code> Talk to the Internet</h1>
-      <p class="article-hero__subtitle">The poisoned Bitwarden CLI package was live for 93 minutes. The useful lesson is not the IOC list. It is that install-time code should not have a general-purpose egress path.</p>
+      <p class="article-hero__subtitle">On April 22, <code>npm install @bitwarden/cli</code> stopped being plumbing and became the breach. Ninety-three minutes was plenty.</p>
     </div>
   </section>
 
   <article class="article-body">
     <div class="article-body__inner">
 
-      <p>On April 22, 2026, Bitwarden briefly distributed a malicious npm package as <code>@bitwarden/cli@2026.4.0</code>. The affected window was 5:57 PM to 7:30 PM ET: ninety-three minutes, according to <a href="https://community.bitwarden.com/t/bitwarden-statement-on-checkmarx-supply-chain-incident/96127" target="_blank" rel="noopener">Bitwarden's statement</a>. Bitwarden says the issue was limited to the npm delivery path for the CLI, not vault data, production systems, browser extensions, or the normal Bitwarden product line.</p>
+      <p>For ninety-three minutes on April 22, 2026, Bitwarden's official npm package for the CLI resolved to a credential harvester. The affected window was 5:57 PM to 7:30 PM ET, according to <a href="https://community.bitwarden.com/t/bitwarden-statement-on-checkmarx-supply-chain-incident/96127" target="_blank" rel="noopener">Bitwarden's statement</a>. The bad version was <code>@bitwarden/cli@2026.4.0</code>.</p>
+
+      <p>Bitwarden says the issue was limited to the npm delivery path for the CLI, not vault data, production systems, browser extensions, or the normal Bitwarden product line.</p>
 
       <p>That scope matters. This was not "Bitwarden vaults were breached." It was worse in a narrower, more operationally interesting way: a trusted developer tool became an install-time credential harvester. If a developer workstation or CI runner pulled that version during the window, the interesting question is not whether the password vault was safe. The question is what that host could read, and where it was allowed to send it.</p>
 
@@ -78,18 +80,39 @@
 
       <h2>Start With Lifecycle Scripts</h2>
 
-      <p>The highest-leverage change is also the least glamorous:</p>
+      <p>The highest-leverage change is also the least glamorous: stop running dependency lifecycle scripts by default.</p>
 
       <pre><code><span class="code-label">CI default</span>
 npm config set ignore-scripts true</code></pre>
 
-      <p>That single setting disables <code>preinstall</code>, <code>install</code>, <code>postinstall</code>, and the rest of npm's lifecycle hook surface. It is not free. Some packages need scripts for native builds or binary downloads: <code>sharp</code>, <code>esbuild</code>, <code>bcrypt</code>, and friends. Good. Make those exceptions explicit.</p>
+      <p>That single setting disables <a href="https://docs.npmjs.com/cli/v11/using-npm/scripts/" target="_blank" rel="noopener">npm lifecycle scripts</a>: <code>preinstall</code>, <code>install</code>, <code>postinstall</code>, <code>prepare</code>, and the rest of the hook surface that runs during <code>npm ci</code> and <code>npm install</code>. It is not free. Some packages need scripts for native builds or binary downloads: <code>sharp</code>, <code>esbuild</code>, <code>bcrypt</code>, and friends. Good. Make those exceptions explicit.</p>
 
-      <pre><code><span class="code-label">Reviewed install wrapper</span>
+      <pre><code><span class="code-label">scripts/npm-install-ci.sh</span>
+#!/usr/bin/env bash
+set -euo pipefail
+
+ALLOW_BUILD_SCRIPTS=(
+  sharp
+  esbuild
+)
+
 npm ci --ignore-scripts
-npm rebuild sharp esbuild</code></pre>
 
-      <p>That is a much better failure mode than "every package in the graph may run code during install." New package needs scripts? It gets a line in the wrapper and a code review. The friction is the control.</p>
+for pkg in "${ALLOW_BUILD_SCRIPTS[@]}"; do
+  npm rebuild --foreground-scripts "$pkg"
+done</code></pre>
+
+      <p><a href="https://docs.npmjs.com/cli/v11/commands/npm-rebuild/" target="_blank" rel="noopener"><code>npm rebuild</code></a> is the native npm escape hatch here. When you pass package names, npm rebuilds only the matching packages. That turns lifecycle execution from an ambient permission into a reviewed list.</p>
+
+      <p>Also set a release-age floor for new resolutions:</p>
+
+      <pre><code><span class="code-label">.npmrc</span>
+ignore-scripts=true
+min-release-age=3</code></pre>
+
+      <p><a href="https://docs.npmjs.com/cli/v11/using-npm/config/#min-release-age" target="_blank" rel="noopener"><code>min-release-age</code></a> tells npm to build the dependency tree using versions that have been available for more than the configured number of days. It would not save you from a lockfile already pinned to a bad version, but it does remove the most dangerous default behavior: accepting a package version published minutes ago just because a range or dist-tag points at it.</p>
+
+      <p>That is a much better failure mode than "every package in the graph may run code during install." New package needs scripts? It gets a line in the wrapper and a code review. New version published five minutes ago? It waits. The friction is the control.</p>
 
       <h2>Then Remove Ambient Egress</h2>
 
