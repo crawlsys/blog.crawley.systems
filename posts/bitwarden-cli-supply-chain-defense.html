@@ -51,7 +51,7 @@
 
       <p>Bitwarden says the issue was limited to the npm delivery path for the CLI, not vault data, production systems, browser extensions, or the normal Bitwarden product line.</p>
 
-      <p>That scope matters. This was not "Bitwarden vaults were breached." It was worse in a narrower, more operationally interesting way: a trusted developer tool became an install-time credential harvester. If a developer workstation or CI runner pulled that version during the window, the interesting question is not whether the password vault was safe. The question is what that host could read, and where it was allowed to send it.</p>
+      <p>That scope matters. This was not "Bitwarden vaults were breached." It was worse in a narrower, more operationally interesting way: a trusted developer tool became an install-time credential harvester. If a developer workstation or CI runner pulled that version during the window, the interesting question is not whether the password vault was safe. The question is what that host could read, and where it was allowed to send it. That is the same pattern I wrote about after <a href="/posts/litellm-supply-chain-attack.html">the LiteLLM PyPI compromise</a>: code execution is bad, but filesystem secrets and open egress turn it into an incident.</p>
 
       <p><a href="https://socket.dev/blog/bitwarden-cli-compromised" target="_blank" rel="noopener">Socket's writeup</a> and <a href="https://safedep.io/bitwarden-cli-supply-chain-compromise/" target="_blank" rel="noopener">SafeDep's analysis</a> describe the same basic shape: a loader executed during install, bootstrapped Bun, ran an obfuscated payload, harvested developer and CI secrets, and exfiltrated them to infrastructure impersonating Checkmarx. It also had fallback paths through GitHub and propagation logic for npm packages when it found publish credentials.</p>
 
@@ -174,10 +174,10 @@ spec:
         <li><code>node</code>, <code>npm</code>, <code>yarn</code>, or <code>pnpm</code> sending non-trivial outbound bytes outside the registry path.</li>
         <li>POST or PUT requests to destinations that have no history with that runner.</li>
         <li>High-entropy request bodies or long encoded query strings from build steps.</li>
-        <li>Unexpected GitHub repository creation, workflow changes, or artifact access after an install.</li>
+        <li>Unexpected GitHub repository creation, workflow changes, or artifact access after an install, especially in automation paths where you already depend on GitHub APIs for review and release work. I covered one small corner of that surface in <a href="/posts/copilot-code-review-programmatic.html">the Copilot review automation post</a>.</li>
       </ul>
 
-      <p>Do not make this your first wall. Attackers can slow-drip data, use trusted destinations, or shape traffic to look less suspicious. Payload inspection tells you something got past the outer controls. Egress restriction prevents the easy win.</p>
+      <p>Do not make this your first wall. Attackers can slow-drip data, use trusted destinations, or shape traffic to look less suspicious. Payload inspection tells you something got past the outer controls. Egress restriction prevents the easy win. If you already have cluster logs in Loki, this is also the kind of signal that belongs in the lightweight LLM-driven detection loop I described in <a href="/posts/sentinel-llm-siem-homelab.html">the Sentinel post</a>.</p>
 
       <h2>MCP Configs Are Secrets Now</h2>
 
@@ -196,7 +196,7 @@ spec:
         <li>Prefer vault-backed tools over flat files and environment dumps.</li>
       </ul>
 
-      <p>This connects directly to the earlier Bitwarden Secrets Manager work. The goal is not "agents never touch secrets." That is not how real infrastructure work happens anymore. The goal is that an agent gets a narrow, audited path to the secret it needs, and a poisoned install script does not get to inherit the same power by accident.</p>
+      <p>This connects directly to the earlier <a href="/posts/bws-mcp-server.html">Bitwarden Secrets Manager MCP work</a>. The goal is not "agents never touch secrets." That is not how real infrastructure work happens anymore. The goal is that an agent gets a narrow, audited path to the secret it needs, and a poisoned install script does not get to inherit the same power by accident.</p>
 
       <h2>The Rollout I Would Actually Ship</h2>
 
