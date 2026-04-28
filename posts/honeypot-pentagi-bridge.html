@@ -252,6 +252,8 @@ for _, ip in candidates[:slots]:
 
       <p>This active-flow cap came from a real failure. The first version counted the wrong statuses, created dozens of simultaneous flows, and proved that agent automation without backpressure can spend money faster than it creates useful information.</p>
 
+      <p><strong>Consumer-plan warning:</strong> do not treat Claude Max or ChatGPT Pro as a cheap backend for unattended PentAGI flows. You can burn through your usage allowance quickly, and the terms are not friendly to this pattern. <a href="https://help.openai.com/en/articles/9793128-what-is-chatgpt-pro" target="_blank" rel="noopener">OpenAI's ChatGPT Pro guidance</a> says Pro usage still has to follow the Terms of Use and calls out automated or programmatic extraction, credential sharing, and using ChatGPT to power third-party services. <a href="https://www.anthropic.com/legal/consumer-terms" target="_blank" rel="noopener">Anthropic's Consumer Terms</a> prohibit automated or non-human access unless you are using an Anthropic API key or have explicit permission, and their <a href="https://support.claude.com/en/articles/12005017-using-agents-according-to-our-usage-policy" target="_blank" rel="noopener">agent guidance</a> separately warns against agents performing unauthorized system access or manipulation. If you want unattended PentAGI runs, use an API/commercial provider or a local model you control.</p>
+
       <h2>The Flow Prompt</h2>
 
       <p>The flow prompt should read like an operating procedure for defensive reconnaissance. You want ownership lookup, conservative service detection, and a short recommendation that helps you decide whether the source deserves a stronger block.</p>
@@ -353,7 +355,7 @@ LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
 
       <p>ChatGPT Pro behaved like a terse expert: one scan, one summary, done. Qwen3-Coder behaved like a careful operator: scan, detect services, verify, cross-check, summarize. It was slower and much chattier, however that trade-off is acceptable when the watcher only allows a few active flows and the marginal token cost is GPU power instead of API billing.</p>
 
-      <p>The current posture is simple: run routine honeypot recon on <code>custom</code> backed by vLLM, keep the ChatGPT Pro bridge available as a manual fallback, and never let the watcher fan out wider than the scanner containers and GPU can tolerate.</p>
+      <p>The current posture is simple: run routine honeypot recon on <code>custom</code> backed by vLLM, keep any paid frontier model path human-initiated and terms-compliant, and never let the watcher fan out wider than the scanner containers and GPU can tolerate.</p>
 
       <h2>Operational Brakes</h2>
 
