@@ -137,6 +137,11 @@ internet scanner
 
       <p>The honeypot does not need to know anything about PentAGI, Kubernetes, GraphQL, or whichever model is currently doing the analysis. It emits a small JSON document, and the watcher becomes the only integration point between the exposed service and the analysis platform.</p>
 
+      <figure class="article-figure">
+        <img src="../pentagi-flows-dark.png" alt="PentAGI flows table in dark mode with redacted honeypot targets." />
+        <figcaption>The watcher turns each new honeypot hit into a bounded PentAGI flow. The targets are redacted here because the UI is showing live homelab data.</figcaption>
+      </figure>
+
       <h2>Install the Honeypot Daemon</h2>
 
       <p>Start on the host that will receive the bait traffic. This can be a tiny edge host, a small VM, or any system where you are comfortable exposing a fake FTP service to the network you control.</p>
@@ -319,6 +324,11 @@ LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
 
       <p>The empty provider string is intentional. In this setup, a provider prefix like <code>custom/gpt-5.4-mini</code> confused the OpenAI-compatible bridge, while leaving the provider blank let PentAGI send raw model names to the endpoint.</p>
 
+      <figure class="article-figure">
+        <img src="../pentagi-providers-dark.png" alt="PentAGI providers page in dark mode showing OpenAI and custom local providers." />
+        <figcaption>The routine path is the custom provider backed by local vLLM. The paid model path stays available for human-initiated work, not unattended honeypot fan-out.</figcaption>
+      </figure>
+
       <h2>The Benchmark That Changed My Mind</h2>
 
       <p>The first local-model run looked bad because Qwen emitted zero tool calls. That result looked like a model failure until the request logs showed it was really a configuration problem.</p>
@@ -376,7 +386,7 @@ LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
 
       <p>The practical design rule is to keep the interfaces boring. The honeypot emits JSON, the watcher owns dedupe and flow pressure, PentAGI owns the investigation, and vLLM handles routine inference for events that do not justify paid-token analysis.</p>
 
-      <p>If you already operate PentAGI, this gives you a useful way to connect low-cost edge signal to agent-driven analysis without letting every scanner become an unbounded workload. If you are still evaluating PentAGI, the important lesson is the same one we learned with monitoring, tracing, and Kubernetes automation: the integration should create operational context, and the automation must respect capacity.</p>
+      <p>If you already operate PentAGI, this gives you a useful way to connect low-cost edge signal to agent-driven analysis without letting every scanner become an unbounded workload. If you are still evaluating PentAGI, the important lesson is the same one learned from operating and observing production systems at scale: the integration should create operational context, and the automation must respect capacity.</p>
 
       <h2>Related Posts</h2>
 
