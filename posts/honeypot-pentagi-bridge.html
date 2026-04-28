@@ -109,7 +109,9 @@
 
       <p>I wanted that signal to turn into a small, repeatable investigation without building another dashboard that I would eventually ignore. The result is a simple pipeline: an FTP honeypot records public source IPs, a watcher daemon turns new entries into <a href="https://pentagi.com" target="_blank" rel="noopener">PentAGI</a> flows, and PentAGI runs bounded defensive reconnaissance through a local model provider.</p>
 
-      <p>The full publishable code is available in <a href="https://github.com/kvncrw/pentagi-honeypot-bridge" target="_blank" rel="noopener">kvncrw/pentagi-honeypot-bridge</a>. The repo contains the daemon, the PentAGI watcher, systemd units, runit scripts, and a few focused tests so you can read the whole thing without reverse-engineering my homelab. If you want to understand PentAGI itself first, start with <a href="https://github.com/vxcontrol/pentagi" target="_blank" rel="noopener">vxcontrol/pentagi</a>.</p>
+      <p>If you have not run into it yet, <a href="https://pentagi.com" target="_blank" rel="noopener">PentAGI</a> is an open-source autonomous security-testing platform from <a href="https://github.com/vxcontrol/pentagi" target="_blank" rel="noopener">vxcontrol</a>. Think of it as a multi-agent pentest workspace with a web UI, flow API, isolated scanner containers, provider routing, and memory/search integrations. You can start from the hosted docs at <a href="https://pentagi.com" target="_blank" rel="noopener">pentagi.com</a> or clone the <a href="https://github.com/vxcontrol/pentagi" target="_blank" rel="noopener">GitHub repo</a>.</p>
+
+      <p>The full publishable code is available in <a href="https://github.com/kvncrw/pentagi-honeypot-bridge" target="_blank" rel="noopener">kvncrw/pentagi-honeypot-bridge</a>. The repo contains the daemon, the PentAGI watcher, systemd units, runit scripts, and a few focused tests so you can read the whole thing without reverse-engineering my homelab.</p>
 
       <figure class="article-figure">
         <img src="../pentagi-login-dark.png" alt="PentAGI login page shown in dark mode." />
@@ -386,6 +388,11 @@ LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
       <h2>Why This Pattern Works</h2>
 
       <p>Most honeypots stop at alerting: "this IP touched the trap." That is useful, however it still leaves triage on you. This pipeline turns the hit into a small report about ownership, exposed services, reputation, and whether the source looks like commodity scanning or something worth blocking more aggressively.</p>
+
+      <figure class="article-figure">
+        <img src="../pentagi-results-summary-dark.png" alt="PentAGI flow summary in dark mode with the target IP redacted." />
+        <figcaption>A finished PentAGI flow is the output I wanted: scan context, enrichment results, explicit limitations, and a short final assessment instead of another raw hit counter.</figcaption>
+      </figure>
 
       <p>The practical design rule is to keep the interfaces boring. The honeypot emits JSON, the watcher owns dedupe and flow pressure, PentAGI owns the investigation, and vLLM handles routine inference for events that do not justify paid-token analysis.</p>
 
