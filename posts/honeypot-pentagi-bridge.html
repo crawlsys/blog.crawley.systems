@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turning Honeypot Noise into PentAGI Investigations | blog.crawley.systems</title>
+  <meta name="description" content="How an FTP honeypot daemon feeds attacker IPs into PentAGI, with bounded flow creation and a local Qwen3-Coder model running on an RTX 5090 through vLLM.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .honeypot-hero {
+      position: relative;
+      min-height: min(760px, 78vh);
+      display: flex;
+      align-items: flex-end;
+      margin-top: 72px;
+      padding: 96px clamp(20px, 4vw, 48px) 72px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      background:
+        linear-gradient(90deg, rgba(10, 10, 11, 0.94) 0%, rgba(10, 10, 11, 0.74) 34%, rgba(10, 10, 11, 0.16) 72%),
+        linear-gradient(0deg, rgba(10, 10, 11, 0.78) 0%, rgba(10, 10, 11, 0.06) 45%),
+        url("../pentagi-honeypot-hero.png") center / cover no-repeat;
+    }
+
+    .honeypot-hero__inner {
+      position: relative;
+      max-width: var(--article-width);
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .honeypot-hero .article-hero__back {
+      margin-bottom: 28px;
+    }
+
+    .honeypot-hero .article-hero__title {
+      font-size: clamp(2.25rem, 5vw, 4.1rem);
+      max-width: 760px;
+    }
+
+    .article-figure {
+      margin: 36px 0;
+    }
+
+    .article-figure img {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+    }
+
+    .article-figure figcaption {
+      margin-top: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+      .honeypot-hero {
+        min-height: 680px;
+        background:
+          linear-gradient(180deg, rgba(10, 10, 11, 0.94) 0%, rgba(10, 10, 11, 0.74) 58%, rgba(10, 10, 11, 0.22) 100%),
+          url("../pentagi-honeypot-hero.png") center / cover no-repeat;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="honeypot-hero">
+    <div class="honeypot-hero__inner">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-04-28</span>
+        <span class="post-card__tags">
+          <span class="tag">security</span>
+          <span class="tag">honeypot</span>
+          <span class="tag">pentagi</span>
+          <span class="tag">llm</span>
+          <span class="tag">homelab</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">Turning Honeypot Noise into PentAGI Investigations</h1>
+      <p class="article-hero__subtitle">A small FTP daemon collects the scanner traffic, a watcher turns new IPs into bounded PentAGI flows, and a local Qwen3-Coder model on an RTX 5090 handles the routine investigation work.</p>
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>What should happen after a random scanner touches your honeypot? Most of the time you get an IP address, maybe a timestamp, and a small reminder that the internet is always knocking on the cheapest door it can find.</p>
+
+      <p>I wanted that signal to turn into a small, repeatable investigation without building another dashboard that I would eventually ignore. The result is a simple pipeline: an FTP honeypot records public source IPs, a watcher daemon turns new entries into PentAGI flows, and PentAGI runs bounded defensive reconnaissance through a local model provider.</p>
+
+      <p>The full publishable code is available in <a href="https://github.com/kvncrw/pentagi-honeypot-bridge" target="_blank" rel="noopener">kvncrw/pentagi-honeypot-bridge</a>. The repo contains the daemon, the PentAGI watcher, systemd units, runit scripts, and a few focused tests so you can read the whole thing without reverse-engineering my homelab.</p>
+
+      <figure class="article-figure">
+        <img src="../pentagi-login-dark.png" alt="PentAGI login page shown in dark mode." />
+        <figcaption>PentAGI is the analyst side of this setup. The edge daemon only needs the API URL and a dedicated token.</figcaption>
+      </figure>
+
+      <h2>What We Are Building</h2>
+
+      <p>There are two parts to this system, and the separation is important because each part has a very different job.</p>
+
+      <p>On the edge host, <code>honeypotd.py</code> listens on FTP and records public source IPs. The same process exposes <code>/blocked.json</code> on port <code>9001</code>, including first-seen time, last-seen time, hit count, reasons, and attempted usernames. It does not store passwords.</p>
+
+      <p>Next to it, <code>pentagi_watcher.py</code> polls that JSON endpoint. For each new IP inside the configured age window, the watcher checks how many PentAGI flows are already active and only creates more work when capacity is available.</p>
+
+      <p>PentAGI runs in Kubernetes. In my homelab it is deployed with ArgoCD, Postgres/pgvector, Graphiti, Neo4j, a scraper service, and a DinD sidecar that launches scanner containers with tools like <code>nmap</code>, <code>curl</code>, <code>jq</code>, <code>traceroute</code>, <code>whois</code>, and <code>dig</code>.</p>
+
+      <pre><code><span class="code-label">pipeline</span>
+internet scanner
+  -&gt; ftp honeypot on :21
+  -&gt; /blocked.json on 127.0.0.1:9001
+  -&gt; pentagi_watcher.py
+  -&gt; PentAGI createFlow(modelProvider: "custom")
+  -&gt; scanner container
+  -&gt; short defensive recon summary</code></pre>
+
+      <p>The honeypot does not need to know anything about PentAGI, Kubernetes, GraphQL, or whichever model is currently doing the analysis. It emits a small JSON document, and the watcher becomes the only integration point between the exposed service and the analysis platform.</p>
+
+      <h2>Install the Honeypot Daemon</h2>
+
+      <p>Start on the host that will receive the bait traffic. This can be a tiny edge host, a small VM, or any system where you are comfortable exposing a fake FTP service to the network you control.</p>
+
+      <pre><code><span class="code-label">install</span>
+git clone https://github.com/kvncrw/pentagi-honeypot-bridge.git
+cd pentagi-honeypot-bridge
+
+sudo useradd --system --home /var/lib/pentagi-honeypot --shell /usr/sbin/nologin honeypot
+sudo mkdir -p /opt/pentagi-honeypot-bridge /var/lib/pentagi-honeypot /etc/pentagi-honeypot
+sudo cp honeypotd.py pentagi_watcher.py /opt/pentagi-honeypot-bridge/
+sudo chown -R honeypot:honeypot /var/lib/pentagi-honeypot</code></pre>
+
+      <p>For the first smoke test, bind FTP to <code>2121</code> instead of privileged port <code>21</code>. You can also allow private addresses during the test so your localhost connection shows up in the feed.</p>
+
+      <pre><code><span class="code-label">local test</span>
+HONEYPOT_FTP_PORT=2121 \
+HONEYPOT_STATE_FILE=/tmp/honeypot-blocked.json \
+HONEYPOT_RECORD_PRIVATE_IPS=true \
+python3 honeypotd.py</code></pre>
+
+      <p>Now touch the service from another shell and check the JSON output:</p>
+
+      <pre><code><span class="code-label">touch the trap</span>
+printf 'USER admin\r\nPASS admin\r\nQUIT\r\n' | nc 127.0.0.1 2121
+curl http://127.0.0.1:9001/blocked.json</code></pre>
+
+      <p>The API is intentionally plain because plain interfaces are easier to secure, test, and replace later.</p>
+
+      <pre><code><span class="code-label">blocked.json</span>
+{
+  "generated_at": "2026-04-28T12:00:00Z",
+  "count": 1,
+  "blocked": [
+    {
+      "ip": "203.0.113.10",
+      "first_seen": "2026-04-28T11:58:12Z",
+      "last_seen": "2026-04-28T11:58:20Z",
+      "hits": 3,
+      "reasons": ["ftp-connect", "ftp-user", "ftp-pass"],
+      "usernames": ["admin"]
+    }
+  ]
+}</code></pre>
+
+      <p>The important code path is also small enough to reason about quickly. Every connection marks the source IP, selected FTP commands update the reason list, and password values are deliberately ignored.</p>
+
+      <pre><code><span class="code-label">honeypotd.py</span>
+def handle(self) -&gt; None:
+    peer_ip = self.client_address[0]
+    self.store.mark(peer_ip, "ftp-connect")
+    self.write_line(self.banner)
+
+    while True:
+        raw = self.rfile.readline(1024)
+        if not raw:
+            return
+        command, _, value = raw.decode(errors="replace").strip().partition(" ")
+        command = command.upper()
+
+        if command == "USER":
+            self.store.mark(peer_ip, "ftp-user", value or None)
+            self.write_line("331 Password required")
+        elif command == "PASS":
+            self.store.mark(peer_ip, "ftp-pass")
+            self.write_line("530 Login incorrect")</code></pre>
+
+      <p>On a systemd host, install the included service files and start the daemon:</p>
+
+      <pre><code><span class="code-label">systemd</span>
+sudo cp systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now honeypotd.service</code></pre>
+
+      <p>If you are using Void Linux or another runit host, the repo includes <code>runit/honeypotd.run</code> and <code>runit/pentagi-watcher.run</code>. My original edge deployment used runit for the host services and Kubernetes for PentAGI itself, which kept the exposed daemon independent from the cluster.</p>
+
+      <h2>Configure the PentAGI Watcher</h2>
+
+      <p>Create a dedicated PentAGI API token for the watcher. The exact UI can change over time, however the operational rule is stable: give the watcher only the access it needs to create and inspect flows, and treat token revocation as your first emergency brake.</p>
+
+      <p>Put the watcher config in <code>/etc/pentagi-honeypot/watcher.env</code>:</p>
+
+      <pre><code><span class="code-label">watcher.env</span>
+BLOCKED_URL=http://127.0.0.1:9001/blocked.json
+PENTAGI_URL=https://pentagi.example.com
+PENTAGI_TOKEN=replace-me
+PENTAGI_MODEL_PROVIDER=custom
+WATCHER_STATE_FILE=/var/lib/pentagi-honeypot/watcher-state.json
+MAX_ACTIVE_FLOWS=2
+MAX_AGE_DAYS=7
+STALE_FLOW_MINUTES=30
+POLL_INTERVAL=120</code></pre>
+
+      <p><code>PENTAGI_MODEL_PROVIDER=custom</code> is the key for the local-model path. In PentAGI, that custom provider points at an OpenAI-compatible vLLM endpoint inside the cluster, so the watcher does not need to know which model is serving the request.</p>
+
+      <p>Start the watcher:</p>
+
+      <pre><code><span class="code-label">start watcher</span>
+sudo systemctl enable --now pentagi-watcher.service
+journalctl -u honeypotd -u pentagi-watcher -f</code></pre>
+
+      <p>The watcher is deliberately conservative. It loads durable state, skips already-seen IPs, ignores stale entries, asks PentAGI how many flows are active, and creates only as many new flows as the cap allows.</p>
+
+      <pre><code><span class="code-label">pentagi_watcher.py</span>
+active = client.active_flow_count(timedelta(minutes=args.stale_flow_minutes))
+slots = max(args.max_active_flows - active, 0)
+
+for _, ip in candidates[:slots]:
+    prompt = build_prompt(ip, bool(args.abuseipdb_enabled))
+    flow = client.create_flow(args.model_provider, prompt)
+    state["seen"][ip] = utc_now().isoformat()
+    LOG.info("created Pentagi flow %s for %s", flow.get("id"), ip)</code></pre>
+
+      <p>This active-flow cap came from a real failure. The first version counted the wrong statuses, created dozens of simultaneous flows, and proved that agent automation without backpressure can spend money faster than it creates useful information.</p>
+
+      <h2>The Flow Prompt</h2>
+
+      <p>The flow prompt should read like an operating procedure for defensive reconnaissance. You want ownership lookup, conservative service detection, and a short recommendation that helps you decide whether the source deserves a stronger block.</p>
+
+      <pre><code><span class="code-label">flow prompt shape</span>
+Perform defensive reconnaissance on IP 203.0.113.10, which just touched our FTP honeypot.
+
+Rules:
+- Use proxychains4 only for direct scans such as nmap.
+- Do third-party API and DNS lookups directly.
+- Keep scans conservative. No exploitation, brute force, or credential attempts.
+
+Steps:
+1. Run a bounded TCP connect scan via Tor.
+2. If ports are open, run service detection against only those ports.
+3. Run WHOIS directly.
+4. Run reverse DNS directly.
+5. Run a short traceroute directly.
+6. Check reputation only if a key is already configured.
+7. Return a short threat summary and blocklist recommendation.</code></pre>
+
+      <p>The proxy split matters in practice. Direct scans go through <code>proxychains4</code>, while API calls, DNS lookups, and reputation checks run directly because routing those through Tor caused avoidable DNS and SOCKS failures without improving the result.</p>
+
+      <h2>Point PentAGI at the 5090</h2>
+
+      <p>I started with the obvious provider path: use ChatGPT Pro through a local OpenAI-compatible bridge and let PentAGI call stronger models for every role. It worked, however a honeypot produces a lot of low-value events, and paying frontier-token prices to classify every random FTP hit is a poor default.</p>
+
+      <p>So I asked Claude to help make the model decision like an operations decision. The prompt was not "find the best model"; it was closer to this:</p>
+
+      <pre><code><span class="code-label">benchmark instruction</span>
+Inventory current coding/agent models that can realistically run on one RTX 5090
+with 32 GB of VRAM. Reject anything that cannot fit with useful context.
+
+Build a PentAGI-specific benchmark using the same GraphQL flow creation path,
+the same scanner tools, and the same defensive recon tasks we expect from the
+honeypot pipeline.
+
+Compare ChatGPT Pro through the bridge against the best local vLLM candidate.
+Grade by task completion, valid tool calling, runtime, and operational cost.</code></pre>
+
+      <p>That framing is important because generic benchmark numbers do not tell you whether PentAGI can call tools reliably, survive your context settings, or produce a useful security summary after a noisy scanner touches FTP.</p>
+
+      <p>The fit check eliminated the giant MoE models immediately: GLM-5-class, Kimi-K2-class, DeepSeek V4-class, and the 480B Qwen coder variants all need far more VRAM than a single desktop card. The survivors were smaller Qwen and Devstral-class models, with Qwen3-Coder-30B-A3B looking like the best match for tool-heavy agent loops.</p>
+
+      <p>The final vLLM deployment serves <code>QuantTrio/Qwen3-Coder-30B-A3B-Instruct-AWQ</code> with the matching <code>qwen3_coder</code> tool parser:</p>
+
+      <pre><code><span class="code-label">vllm values</span>
+model:
+  name: QuantTrio/Qwen3-Coder-30B-A3B-Instruct-AWQ
+  maxModelLen: 65536
+  maxNumSeqs: 4
+  gpuMemoryUtilization: "0.92"
+  quantization: awq_marlin
+  enableAutoToolChoice: true
+  toolCallParser: qwen3_coder</code></pre>
+
+      <p>PentAGI's custom provider points at that in-cluster OpenAI-compatible endpoint:</p>
+
+      <pre><code><span class="code-label">pentagi values</span>
+LLM_SERVER_PROVIDER: ""
+LLM_SERVER_URL: "http://vllm.vllm.svc.cluster.local:8000/v1"
+LLM_SERVER_KEY: "pentagi-internal-no-billing"
+LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
+
+      <p>The empty provider string is intentional. In this setup, a provider prefix like <code>custom/gpt-5.4-mini</code> confused the OpenAI-compatible bridge, while leaving the provider blank let PentAGI send raw model names to the endpoint.</p>
+
+      <h2>The Benchmark That Changed My Mind</h2>
+
+      <p>The first local-model run looked bad because Qwen emitted zero tool calls. That result looked like a model failure until the request logs showed it was really a configuration problem.</p>
+
+      <p>Two settings were doing the damage. PentAGI's inherited role config had output budgets as high as the model context window, which left vLLM with no input budget and caused request validation failures. Sampling temperatures around <code>0.4</code> to <code>0.7</code> were also too high for reliable tool-call JSON from this model.</p>
+
+      <p>Capping role outputs and dropping temperature to <code>0.1</code> fixed the tool-calling behavior. After that, the benchmark results became useful:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Avg Duration</th>
+            <th>Avg Tool Calls</th>
+            <th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ChatGPT Pro bridge</td>
+            <td>208.0s</td>
+            <td>1.0</td>
+            <td>2.67 / 3</td>
+          </tr>
+          <tr>
+            <td>Qwen3-Coder-30B on vLLM</td>
+            <td>310.5s</td>
+            <td>25.3</td>
+            <td>3.00 / 3</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>ChatGPT Pro behaved like a terse expert: one scan, one summary, done. Qwen3-Coder behaved like a careful operator: scan, detect services, verify, cross-check, summarize. It was slower and much chattier, however that trade-off is acceptable when the watcher only allows a few active flows and the marginal token cost is GPU power instead of API billing.</p>
+
+      <p>The current posture is simple: run routine honeypot recon on <code>custom</code> backed by vLLM, keep the ChatGPT Pro bridge available as a manual fallback, and never let the watcher fan out wider than the scanner containers and GPU can tolerate.</p>
+
+      <h2>Operational Brakes</h2>
+
+      <p>Agent-based automation needs visible brakes, especially when it can create containers, run scans, and consume paid or local inference capacity.</p>
+
+      <ul>
+        <li><strong>Stop new work:</strong> stop <code>pentagi-watcher.service</code>.</li>
+        <li><strong>Stop auth:</strong> revoke the dedicated PentAGI watcher token.</li>
+        <li><strong>Stop current work:</strong> finish or cancel active PentAGI flows.</li>
+        <li><strong>Control spend:</strong> keep <code>MAX_ACTIVE_FLOWS</code> low and treat increases as capacity changes.</li>
+        <li><strong>Control replay:</strong> keep the watcher state file durable so restarts do not resubmit the whole blocked list.</li>
+      </ul>
+
+      <p>The old failure mode came from asking PentAGI to do exactly what the automation requested, too many times at once. That is why the watcher must own dedupe, active-flow limits, and stale-flow handling before any investigation reaches the agent layer.</p>
+
+      <h2>Why This Pattern Works</h2>
+
+      <p>Most honeypots stop at alerting: "this IP touched the trap." That is useful, however it still leaves triage on you. This pipeline turns the hit into a small report about ownership, exposed services, reputation, and whether the source looks like commodity scanning or something worth blocking more aggressively.</p>
+
+      <p>The practical design rule is to keep the interfaces boring. The honeypot emits JSON, the watcher owns dedupe and flow pressure, PentAGI owns the investigation, and vLLM handles routine inference for events that do not justify paid-token analysis.</p>
+
+      <p>If you already operate PentAGI, this gives you a useful way to connect low-cost edge signal to agent-driven analysis without letting every scanner become an unbounded workload. If you are still evaluating PentAGI, the important lesson is the same one we learned with monitoring, tracing, and Kubernetes automation: the integration should create operational context, and the automation must respect capacity.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>
