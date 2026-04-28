@@ -150,12 +150,12 @@ sudo mkdir -p /opt/pentagi-honeypot-bridge /var/lib/pentagi-honeypot /etc/pentag
 sudo cp honeypotd.py pentagi_watcher.py /opt/pentagi-honeypot-bridge/
 sudo chown -R honeypot:honeypot /var/lib/pentagi-honeypot</code></pre>
 
-      <p>For the first smoke test, bind FTP to <code>2121</code> instead of privileged port <code>21</code>. You can also allow private addresses during the test so your localhost connection shows up in the feed.</p>
+      <p>For the first smoke test, bind FTP to <code>2121</code> instead of privileged port <code>21</code>. The daemon ignores loopback, RFC1918, link-local, and unique-local IPv6 ranges by default; clear the ignore list for this local test so <code>127.0.0.1</code> shows up in the feed.</p>
 
       <pre><code><span class="code-label">local test</span>
 HONEYPOT_FTP_PORT=2121 \
 HONEYPOT_STATE_FILE=/tmp/honeypot-blocked.json \
-HONEYPOT_RECORD_PRIVATE_IPS=true \
+HONEYPOT_IGNORE_CIDRS= \
 python3 honeypotd.py</code></pre>
 
       <p>Now touch the service from another shell and check the JSON output:</p>
@@ -164,7 +164,7 @@ python3 honeypotd.py</code></pre>
 printf 'USER admin\r\nPASS admin\r\nQUIT\r\n' | nc 127.0.0.1 2121
 curl http://127.0.0.1:9001/blocked.json</code></pre>
 
-      <p>The API is intentionally plain because plain interfaces are easier to secure, test, and replace later.</p>
+      <p>The feed should look like this:</p>
 
       <pre><code><span class="code-label">blocked.json</span>
 {
@@ -262,12 +262,11 @@ for _, ip in candidates[:slots]:
 Perform defensive reconnaissance on IP 203.0.113.10, which just touched our FTP honeypot.
 
 Rules:
-- Use proxychains4 only for direct scans such as nmap.
-- Do third-party API and DNS lookups directly.
+- Use direct scanner-container tooling.
 - Keep scans conservative. No exploitation, brute force, or credential attempts.
 
 Steps:
-1. Run a bounded TCP connect scan via Tor.
+1. Run a bounded TCP connect scan against a small port set.
 2. If ports are open, run service detection against only those ports.
 3. Run WHOIS directly.
 4. Run reverse DNS directly.
@@ -275,7 +274,7 @@ Steps:
 6. Check reputation only if a key is already configured.
 7. Return a short threat summary and blocklist recommendation.</code></pre>
 
-      <p>The proxy split matters in practice. Direct scans go through <code>proxychains4</code>, while API calls, DNS lookups, and reputation checks run directly because routing those through Tor caused avoidable DNS and SOCKS failures without improving the result.</p>
+      <p>An earlier version routed scanner traffic through Tor with <code>proxychains4</code>. That path is gone because it made the system worse: avoidable DNS failures, SOCKS failures, slower runs, and reports that were harder to trust. The current prompt keeps the work direct, conservative, and bounded inside the scanner container.</p>
 
       <h2>Point PentAGI at the 5090</h2>
 
@@ -294,7 +293,7 @@ honeypot pipeline.
 Compare ChatGPT Pro through the bridge against the best local vLLM candidate.
 Grade by task completion, valid tool calling, runtime, and operational cost.</code></pre>
 
-      <p>That framing is important because generic benchmark numbers do not tell you whether PentAGI can call tools reliably, survive your context settings, or produce a useful security summary after a noisy scanner touches FTP.</p>
+      <p>That framing is important because generic benchmark numbers do not tell you whether PentAGI can call tools reliably, survive your context settings, or produce a useful security summary after a noisy scanner touches your infra.</p>
 
       <p>The fit check eliminated the giant MoE models immediately: GLM-5-class, Kimi-K2-class, DeepSeek V4-class, and the 480B Qwen coder variants all need far more VRAM than a single desktop card. The survivors were smaller Qwen and Devstral-class models, with Qwen3-Coder-30B-A3B looking like the best match for tool-heavy agent loops.</p>
 
