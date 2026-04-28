@@ -257,7 +257,10 @@ for _, ip in candidates[:slots]:
 
       <p>This active-flow cap came from a real failure. The first version counted the wrong statuses, created dozens of simultaneous flows, and proved that agent automation without backpressure can spend money faster than it creates useful information.</p>
 
-      <p><strong>Consumer-plan warning:</strong> do not treat Claude Max or ChatGPT Pro as a cheap backend for unattended PentAGI flows. You can burn through your usage allowance quickly, and the terms are not friendly to this pattern. <a href="https://help.openai.com/en/articles/9793128-what-is-chatgpt-pro" target="_blank" rel="noopener">OpenAI's ChatGPT Pro guidance</a> says Pro usage still has to follow the Terms of Use and calls out automated or programmatic extraction, credential sharing, and using ChatGPT to power third-party services. <a href="https://www.anthropic.com/legal/consumer-terms" target="_blank" rel="noopener">Anthropic's Consumer Terms</a> prohibit automated or non-human access unless you are using an Anthropic API key or have explicit permission, and their <a href="https://support.claude.com/en/articles/12005017-using-agents-according-to-our-usage-policy" target="_blank" rel="noopener">agent guidance</a> separately warns against agents performing unauthorized system access or manipulation. If you want unattended PentAGI runs, use an API/commercial provider or a local model you control.</p>
+      <div class="callout callout--warning">
+        <div class="callout__title">Consumer Plans Are Not Agent Backends</div>
+        <p>Do not wire Claude Max or ChatGPT Pro into unattended PentAGI flows. You can burn through usage quickly, and the <a href="https://help.openai.com/en/articles/9793128-what-is-chatgpt-pro" target="_blank" rel="noopener">ChatGPT Pro</a> and <a href="https://www.anthropic.com/legal/consumer-terms" target="_blank" rel="noopener">Claude consumer</a> terms restrict this kind of automated, third-party workload. Use an API/commercial provider or a local model you control.</p>
+      </div>
 
       <h2>The Flow Prompt</h2>
 
