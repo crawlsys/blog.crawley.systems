@@ -258,8 +258,8 @@ for _, ip in candidates[:slots]:
       <p>This active-flow cap came from a real failure. The first version counted the wrong statuses, created dozens of simultaneous flows, and proved that agent automation without backpressure can spend money faster than it creates useful information.</p>
 
       <div class="callout callout--warning">
-        <div class="callout__title">Consumer Plans Are Not Agent Backends</div>
-        <p>Do not wire Claude Max or ChatGPT Pro into unattended PentAGI flows. You can burn through usage quickly, and the <a href="https://help.openai.com/en/articles/9793128-what-is-chatgpt-pro" target="_blank" rel="noopener">ChatGPT Pro</a> and <a href="https://www.anthropic.com/legal/consumer-terms" target="_blank" rel="noopener">Claude consumer</a> terms restrict this kind of automated, third-party workload. Use an API/commercial provider or a local model you control.</p>
+        <div class="callout__title">Consumer Plan Caveat</div>
+        <p>Be careful wiring Claude Max or ChatGPT Pro into unattended PentAGI flows. This kind of automation can chew through usage fast, and people have had accounts TOS'd for running consumer seats like third-party agent backends. For anything long-running, use an API/commercial provider or a local model you control.</p>
       </div>
 
       <h2>The Flow Prompt</h2>
