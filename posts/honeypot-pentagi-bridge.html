@@ -391,7 +391,7 @@ LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
 
       <figure class="article-figure">
         <img src="../pentagi-results-summary-dark.png" alt="PentAGI flow summary in dark mode with the target IP redacted." />
-        <figcaption>A finished PentAGI flow is the output I wanted: scan context, enrichment results, explicit limitations, and a short final assessment instead of another raw hit counter.</figcaption>
+        <figcaption>A better finished flow: PentAGI classifies the hit as scanner infrastructure, records the enrichment path, documents the scan limitations, and leaves me with a short operational summary instead of another raw hit counter.</figcaption>
       </figure>
 
       <p>The practical design rule is to keep the interfaces boring. The honeypot emits JSON, the watcher owns dedupe and flow pressure, PentAGI owns the investigation, and vLLM handles routine inference for events that do not justify paid-token analysis.</p>
