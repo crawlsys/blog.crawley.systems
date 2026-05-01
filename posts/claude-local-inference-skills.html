@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stop Burning Frontier Tokens on Routine Inference | blog.crawley.systems</title>
+  <meta name="description" content="How I taught Claude to send routine image and video work to a homelab GPU using two small CLIs and a couple of Claude skills, instead of paying frontier-token prices to read a screenshot.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .hero-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 80vh;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-split__text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px clamp(24px, 4vw, 64px) 80px clamp(24px, 4vw, 64px);
+    }
+    .hero-split__image {
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-split__image img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      object-fit: cover;
+    }
+    .hero-split__image::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, var(--bg-primary) 0%, transparent 20%);
+    }
+    @media (max-width: 768px) {
+      .hero-split { grid-template-columns: 1fr; }
+      .hero-split__image { height: 300px; }
+      .hero-split__image::after {
+        background: linear-gradient(to top, var(--bg-primary) 0%, transparent 30%);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero-split">
+    <div class="hero-split__text">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-05-01</span>
+        <span class="post-card__tags">
+          <span class="tag">claude</span>
+          <span class="tag">homelab</span>
+          <span class="tag">vllm</span>
+          <span class="tag">skills</span>
+          <span class="tag">handheld</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">Stop Burning Frontier Tokens on Routine Inference</h1>
+      <p class="article-hero__subtitle">Two small CLIs and a pair of Claude skills push image, video, and research work onto a homelab GPU. Frontier intelligence stays for the part of the job that actually needs it.</p>
+    </div>
+    <div class="hero-split__image">
+      <img src="../thor-local-inference-hero.png" alt="">
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>Why are we still paying frontier-token prices to read a screenshot?</p>
+
+      <p>Last week I unboxed an <a href="https://www.aynstore.com/products/thor" target="_blank" rel="noopener">AYN Thor</a> handheld and went looking for the canonical "set this up like a pro" YouTube video. There isn't one, because the Thor is new, dual-screen, rooted Android, and the existing handheld content is mostly ROG Ally and Steam Deck material. I was not going to sit through ten loosely related videos to learn which launcher to install and how to get Steam onto the top screen.</p>
+
+      <p>So I asked Claude. Claude is a fine reasoning agent and a perfectly competent research analyst, but you don't need a frontier model to summarize a 12-minute YouTube clip about a launcher menu. You need a transcript, a few captioned frames, and a model that can write a paragraph. I already have a homelab with an RTX 5090, so I built two small tools and two Claude skills that send the routine work there and reserve Claude's frontier reasoning for the part of the job that actually benefits from it.</p>
+
+      <p>The result is the setup in this post: two CLIs (<code>thor-ask</code> for screen and image narration, <code>thor-vid</code> for video transcription and scene description), a local vision model on the 5090, and Claude skills that nudge the assistant toward the local path whenever the work is token-heavy and the answer doesn't need GPT-class judgment.</p>
+
+      <h2>The Routing Decision</h2>
+
+      <p>Before any tooling, you need a clean way to decide which model gets which job. I think about it as three buckets:</p>
+
+      <ul>
+        <li><strong>Frontier reasoning.</strong> Hard architecture decisions, multi-file refactors, novel security analysis, anything where one wrong call costs hours. Pay frontier-token prices here.</li>
+        <li><strong>Bulk narration.</strong> Image OCR, screenshot summaries, video transcription, scene captioning, "what's on this PDF page". The output is mechanical description, the input is huge, and the marginal value of a smarter model is small.</li>
+        <li><strong>Bulk research.</strong> Reading ten blog posts to extract one comparison table, summarizing a channel's worth of YouTube videos, distilling release notes across a dozen versions. Token-heavy, judgment-light.</li>
+      </ul>
+
+      <p>Buckets two and three are where local hardware wins. A single 5090 with 32 GB of VRAM can run a 30B-class model with plenty of context, and the only ongoing cost is the wattage. Once a model lives behind an OpenAI-compatible URL, anything that speaks the chat-completions protocol can call it. That includes Claude, when you give it a tool that points at the right endpoint.</p>
+
+      <h2>The Hardware Behind the Endpoints</h2>
+
+      <p>The homelab side is intentionally small. One node (<code>bruiser</code>) holds an RTX 5090 and serves two endpoints inside the cluster:</p>
+
+      <pre><code><span class="code-label">homelab inference endpoints</span>
+# image / video frame description (Qwen2.5-VL-7B-Instruct-AWQ)
+http://172.16.100.117:31800/v1
+
+# audio transcription (faster-whisper, OpenAI-compatible)
+http://172.16.100.117:31900/v1</code></pre>
+
+      <p>Both run from Helm charts in my <code>homelab</code> repo. The vision model is small enough to share the GPU with my agent-routing model through time-slicing, so the same 5090 also handles tool-calling work for <a href="/posts/honeypot-pentagi-bridge">PentAGI</a> and a few other agents. There is nothing exotic in the stack: vLLM, faster-whisper-server, ArgoCD, a NodePort. The interesting part is what you do with these endpoints once they exist.</p>
+
+      <h2>thor-ask: Read the Screen, Read the Image</h2>
+
+      <p>The first tool is <code>thor-ask</code>. It started as a Thor-specific helper for reading the handheld's screen over ADB, then I generalized the underlying call so it works on any image.</p>
+
+      <p>The Thor variant is a one-liner. It pulls a screenshot off the device and sends it to the local vision model with a prompt biased toward OCR and game identification:</p>
+
+      <pre><code><span class="code-label">thor-ask, screen capture path</span>
+$ thor-ask "what app is on screen and what's the menu state?"
+[capture 412KB in 88ms; model=Qwen/Qwen2.5-VL-7B-Instruct-AWQ]
+[llm 1.4s]
+
+ES-DE frontend on the primary display, "Systems" view focused on the
+"Nintendo - GameCube" tile. Top-right shows time 14:32 and battery 78%.
+The bottom hint bar reads "A: Select   B: Back   Start: Menu".</code></pre>
+
+      <p>Behind that is a tiny Python script. The capture step is <code>adb exec-out screencap -p</code>, the inference step is a base64-encoded image inside an OpenAI <code>chat/completions</code> request. Total source is about 100 lines, no dependencies outside the standard library:</p>
+
+      <pre><code><span class="code-label">thor-ask: the call to vLLM</span>
+def ask(base_url, model, prompt, png_bytes):
+    b64 = base64.b64encode(png_bytes).decode()
+    body = {
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url",
+                 "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            ],
+        }],
+        "max_tokens": 1024,
+        "temperature": 0.1,
+    }
+    ...</code></pre>
+
+      <p>The same function, called with a file path instead of a screencap, works for every screenshot, photo, and PDF page I throw at it. When Claude needs to read a long screenshot or describe an image, the right behavior is to call <code>thor-ask --file path/to/image.png "describe this in detail"</code> and get a paragraph back in under two seconds, not to consume vision tokens against a frontier API for the same job.</p>
+
+      <h2>thor-vid: Watch the Video So You Don't Have To</h2>
+
+      <p>The second tool is <code>thor-vid</code>. This is the one that actually saved me from the AYN Thor YouTube spiral.</p>
+
+      <p>You hand it a URL or a local file. It runs <code>yt-dlp</code> to pull the audio and the video, sends the audio to Whisper for a timestamped transcript, samples frames at a configurable cadence, and asks the vision model to describe each frame in a single sentence. The output is a merged markdown report with the transcript and the scene captions interleaved on the same timeline.</p>
+
+      <pre><code><span class="code-label">thor-vid, full pipeline</span>
+$ thor-vid "https://www.youtube.com/watch?v=&lt;ayn-thor-setup-video&gt;" \
+    --frames-per-min 6
+[yt-dlp ok: 12m04s, 1080p]
+[whisper 38.2s -&gt; 184 segments]
+[frame sample every 10s -&gt; 73 frames]
+[vl 41.7s -&gt; 73 captions]
+
+wrote ~/.agents/scratch/thor-vid/ayn-thor-setup/summary.md</code></pre>
+
+      <p>The merged file looks like a screenplay. Every transcript chunk sits next to a one-line description of what's actually on screen, which means a model summarizing the file gets the visual context it needs without watching anything. Claude reads the markdown the same way it would read a blog post, and it can pull the answer out of a twelve-minute video in seconds.</p>
+
+      <pre><code><span class="code-label">summary.md, excerpt</span>
+[00:01:12 - 00:01:25]
+host: "First thing I do on a new Thor is replace the launcher with ES-DE,
+       because the stock one doesn't deal with the bottom screen well."
+scene: Stock AYN launcher visible on top screen, Settings app open on bottom
+       screen, finger tapping "Apps".
+
+[00:01:26 - 00:01:39]
+host: "Long-press the home button, hit 'Set as default home', pick ES-DE."
+scene: Android home selector dialog with "ES-DE" and "AYN Launcher" options,
+       cursor over "ES-DE".</code></pre>
+
+      <p>The runtime, on a single 5090, lands around twice the wall-clock duration of the source video (a 12-minute clip takes roughly two minutes, dominated by the frame caption pass). Multiply that by the ten videos I would have watched to set up the Thor and the trade is obvious. The frontier-token equivalent of the same work, with vision-token pricing on every frame, would have been comically expensive.</p>
+
+      <p>The full pipeline diagram is small enough to fit in a paragraph: yt-dlp pulls the media, ffmpeg makes a 16k mono WAV, faster-whisper transcribes, ffmpeg drops a frame every 10 seconds, the vision model captions each frame, and a tiny Python script merges everything by timestamp. There is no orchestrator, no queue, no cluster of workers. One CLI, one node, one report.</p>
+
+      <h2>Skills, or How You Stop Reminding Claude</h2>
+
+      <p>Tools are only half the problem. The other half is convincing Claude to use them when the work calls for it, instead of reaching for its built-in vision capability or burning context on a long YouTube transcript that some other tool already produced for free.</p>
+
+      <p>Claude Code's <a href="https://docs.claude.com/en/docs/claude-code/skills" target="_blank" rel="noopener">skills</a> system solves this. A skill is a small markdown file with YAML frontmatter that tells Claude what the skill does and when to invoke it. The frontmatter is matched against the user's intent, so a well-written description means Claude reaches for the skill on the right kinds of prompts without you having to remember to say "use thor-vid".</p>
+
+      <p>The skill that wraps <code>thor-vid</code> is twenty lines:</p>
+
+      <pre><code><span class="code-label">~/.claude/skills/thor-vid/SKILL.md</span>
+---
+name: thor-vid
+description: &gt;
+  Transcribe and frame-caption a video using the homelab Whisper + VL stack
+  on bruiser. Use whenever the user shares a YouTube URL or a local video file
+  and wants a summary, transcript, scene description, or "what does this video
+  say". Always prefer this over watching the video or transcribing with a
+  frontier model. Triggers: youtube link, video file, .mp4, .mov, "summarize
+  this video", "what's in this video", "transcribe".
+---
+
+# thor-vid skill
+
+When the user gives you a video URL or a local video file:
+
+1. Run `thor-vid &lt;url-or-path&gt;` and wait for completion.
+2. Read `~/.agents/scratch/thor-vid/&lt;slug&gt;/summary.md`.
+3. Answer the user's actual question from that file. Do not paste the
+   whole transcript unless they explicitly ask for it.
+
+Use `--frames-per-min` to control caption density. Default is 4. For dense
+tutorial content, bump to 6 or 8.</code></pre>
+
+      <p>Two things in there matter beyond the obvious "run this CLI" instruction. The <strong>description</strong> is written for Claude's matcher, not for a human reader, which is why it lists trigger phrases and explicitly tells Claude to prefer the local path over the frontier path. And the <strong>numbered steps</strong> close the loop: Claude runs the CLI, reads the report, and answers the question rather than dumping the transcript back to the user.</p>
+
+      <p>The <code>thor-ask</code> skill is shaped the same way:</p>
+
+      <pre><code><span class="code-label">~/.claude/skills/thor-ask/SKILL.md (excerpt)</span>
+---
+name: thor-ask
+description: &gt;
+  Describe images, screenshots, and PDF pages using the local vision model.
+  Use whenever the user shares an image file, asks "what's on this screen",
+  or needs OCR. Prefer this over reading the image directly. Triggers: png,
+  jpg, screenshot, "read this image", "what does this say", "OCR".
+---</code></pre>
+
+      <p>One real behavior change came out of this. Before the skill existed, I would say "look at this screenshot" and Claude would happily process the image with its own vision capability, which is fine but burns input tokens against a paid quota. Now Claude defers to <code>thor-ask</code> for routine reads and only falls back to its native vision when the prompt actually rewards a smarter model — diagrams that need careful structural reasoning, code in screenshots that needs to be modified, that kind of thing.</p>
+
+      <h2>Wiring the AYN Thor</h2>
+
+      <p>The Thor was the test that proved the rest of the setup was worth keeping. The device is unusual: dual screens, rooted Android 13, ADB-only access (SSH is closed), an unfamiliar mix of GameNative, ES-DE, and a stock launcher that fights the second screen. The community wisdom is scattered across YouTube videos, forum posts, and the occasional README.</p>
+
+      <p>I told Claude what I had, pointed it at three setup videos, and let the skills do the rest:</p>
+
+      <pre><code><span class="code-label">the actual conversation</span>
+me:    here are three videos about setting up the AYN Thor. Use thor-vid
+       on each, then write me a short setup plan. I want to land Steam
+       (GameNative) on the primary display and ES-DE as the home app.
+
+claude: [runs thor-vid on each URL]
+       [reads three summary.md files]
+
+       Plan:
+       1. Set ES-DE as home: cmd package set-home-activity ...
+       2. GameNative is the practical "Steam" client on rooted ARM Android.
+          Force it onto the primary display with: cmd activity start-activity
+          --display 0 -n app.gamenative/.MainActivityAliasDefault
+       3. CocoonShell still runs on display 4 — leave it alone, it doesn't
+          fight ES-DE.
+       4. ROMs go under /storage/&lt;volume&gt;/Emulation/roms.
+
+       Want me to write the steam-on-top wrapper to /data/local/tmp/ now?</code></pre>
+
+      <p>Total work on my side: three URLs, one paragraph of intent. Total time on the homelab side: about six minutes for transcription and captioning, parallelizable across the three videos. Total frontier tokens spent on the routine narration: zero.</p>
+
+      <p>The Thor topology I ended up with — Display 0 as the primary "Built-in Screen", Display 4 as the secondary touch panel, GameNative on display 0, ES-DE as home — came directly out of those summaries combined with a couple of follow-up questions Claude could answer from the merged transcripts.</p>
+
+      <h2>What This Pattern Buys You</h2>
+
+      <p>The architecture is small enough that the value gets lost if you describe it as "local inference". The real shift is the routing rule: send the bulk, narration-shaped work to your own GPU, and reserve the frontier model for the work that benefits from a frontier model.</p>
+
+      <p>You get a few practical things from that:</p>
+
+      <ul>
+        <li><strong>Cost stops scaling with input size.</strong> A two-hour podcast and a twelve-minute video cost the same wattage to transcribe. They cost dramatically different amounts on a per-token API.</li>
+        <li><strong>Privacy is the default.</strong> The screen captures, the local PDFs, the homelab screenshots — none of it leaves the network.</li>
+        <li><strong>You stop apologizing for your inputs.</strong> Big logs, long videos, dense screenshots, hour-long meeting recordings — all fine, because the model serving them costs nothing per token.</li>
+        <li><strong>Frontier reasoning gets sharper.</strong> Claude is no longer chewing through twenty thousand tokens of YouTube auto-captions before it gets to the question you actually asked. The local stack distills first; Claude reasons over the distillation.</li>
+      </ul>
+
+      <h2>What's Worth Doing Yourself</h2>
+
+      <p>If you want to try this without recreating my whole homelab, the order I would build in is:</p>
+
+      <ol>
+        <li><strong>Stand up one OpenAI-compatible vision endpoint.</strong> A single GPU, vLLM, a Qwen2.5-VL or Phi-3.5-vision model. Confirm you can hit <code>/v1/chat/completions</code> with a base64 image.</li>
+        <li><strong>Wrap it in a tiny CLI.</strong> Take a file or a URL, return a paragraph. Resist the temptation to make this a service. CLIs compose with skills, prompts, and shell loops in a way services don't.</li>
+        <li><strong>Add Whisper if you watch video.</strong> faster-whisper-server is a single container, runs on the same GPU, and the OpenAI-compatible mode means your CLI is one HTTP call.</li>
+        <li><strong>Write the skill last.</strong> The CLI has to be reliable before the skill is worth installing — a flaky tool that Claude reaches for automatically is worse than no tool at all.</li>
+      </ol>
+
+      <p>The full source for <code>thor-ask</code> and <code>thor-vid</code> lives in <a href="https://github.com/kvncrw/thor-tools" target="_blank" rel="noopener">kvncrw/thor-tools</a>, the vLLM and Whisper Helm charts are in <a href="https://github.com/kvncrw/homelab" target="_blank" rel="noopener">kvncrw/homelab</a>, and the skills directory layout follows the standard <a href="https://docs.claude.com/en/docs/claude-code/skills" target="_blank" rel="noopener">Claude Code skill format</a>. Nothing here requires a special integration — it's all OpenAI-compatible HTTP and a few markdown files.</p>
+
+      <h2>Related Posts</h2>
+
+      <p>The same routing argument shows up in <a href="/posts/honeypot-pentagi-bridge">Turning Honeypot Noise into PentAGI Investigations</a>, where the same RTX 5090 handles routine defensive recon while paid models stay reserved for human-initiated work. The shared idea: agents need to spend tokens like an operator spends money, and the only way that happens is by giving them a cheaper path that's good enough for the routine case.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>
