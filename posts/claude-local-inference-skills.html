@@ -10,6 +10,58 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../styles.css">
   <style>
+    .article-diagram {
+      margin: 40px 0;
+    }
+    .article-diagram svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+    }
+    .article-diagram figcaption {
+      margin-top: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .article-diagram .dg-text {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      fill: #fafafa;
+    }
+    .article-diagram .dg-muted {
+      fill: #a1a1aa;
+    }
+    .article-diagram .dg-dim {
+      fill: #71717a;
+    }
+    .article-diagram .dg-box {
+      fill: #18181b;
+      stroke: #27272a;
+      stroke-width: 1;
+    }
+    .article-diagram .dg-box-accent {
+      fill: #18181b;
+      stroke: #f59e0b;
+      stroke-width: 1.25;
+    }
+    .article-diagram .dg-box-cool {
+      fill: #18181b;
+      stroke: #60a5fa;
+      stroke-width: 1.25;
+    }
+    .article-diagram .dg-line {
+      stroke: #3f3f46;
+      stroke-width: 1.25;
+      fill: none;
+    }
+    .article-diagram .dg-line-accent { stroke: #f59e0b; }
+    .article-diagram .dg-line-cool { stroke: #60a5fa; }
+    .article-diagram .dg-amber { fill: #f59e0b; }
+    .article-diagram .dg-blue { fill: #60a5fa; }
     .hero-split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -105,6 +157,51 @@
         <li><strong>Bulk research.</strong> Reading ten blog posts to extract one comparison table, summarizing a channel's worth of YouTube videos, distilling release notes across a dozen versions. Token-heavy, judgment-light.</li>
       </ul>
 
+      <figure class="article-diagram">
+        <svg viewBox="0 0 760 320" role="img" aria-label="Routing diagram showing frontier reasoning routed to a paid frontier API while bulk narration and bulk research route to a local GPU.">
+          <!-- left column: input buckets -->
+          <g>
+            <rect class="dg-box" x="20" y="30" width="280" height="64" rx="6"/>
+            <text class="dg-text" x="36" y="56" font-size="13" font-weight="600">frontier reasoning</text>
+            <text class="dg-muted" x="36" y="78" font-size="11">architecture, refactors, novel analysis</text>
+
+            <rect class="dg-box" x="20" y="128" width="280" height="64" rx="6"/>
+            <text class="dg-text" x="36" y="154" font-size="13" font-weight="600">bulk narration</text>
+            <text class="dg-muted" x="36" y="176" font-size="11">OCR, screenshots, video, frame captioning</text>
+
+            <rect class="dg-box" x="20" y="226" width="280" height="64" rx="6"/>
+            <text class="dg-text" x="36" y="252" font-size="13" font-weight="600">bulk research</text>
+            <text class="dg-muted" x="36" y="274" font-size="11">cross-doc summary, release-note distill</text>
+          </g>
+
+          <!-- connectors -->
+          <g>
+            <path class="dg-line dg-line-accent" d="M 300 62 C 380 62, 380 70, 460 70" />
+            <polygon class="dg-amber" points="460,66 470,70 460,74" />
+
+            <path class="dg-line dg-line-cool" d="M 300 160 C 380 160, 380 220, 460 220" />
+            <path class="dg-line dg-line-cool" d="M 300 258 C 380 258, 380 234, 460 234" />
+            <polygon class="dg-blue" points="460,216 470,220 460,224" />
+            <polygon class="dg-blue" points="460,230 470,234 460,238" />
+          </g>
+
+          <!-- right column: destinations -->
+          <g>
+            <rect class="dg-box-accent" x="470" y="30" width="270" height="80" rx="6"/>
+            <text class="dg-amber" x="490" y="56" font-size="11" font-weight="500" letter-spacing="1">FRONTIER API</text>
+            <text class="dg-text" x="490" y="78" font-size="13" font-weight="600">paid model, billed per token</text>
+            <text class="dg-muted" x="490" y="98" font-size="11">Claude / GPT / etc — reserved for hard work</text>
+
+            <rect class="dg-box-cool" x="470" y="180" width="270" height="100" rx="6"/>
+            <text class="dg-blue" x="490" y="206" font-size="11" font-weight="500" letter-spacing="1">LOCAL GPU</text>
+            <text class="dg-text" x="490" y="228" font-size="13" font-weight="600">RTX 5090 in the homelab</text>
+            <text class="dg-muted" x="490" y="248" font-size="11">vLLM + faster-whisper, OpenAI-compatible</text>
+            <text class="dg-dim" x="490" y="266" font-size="11">cost = wattage, not tokens</text>
+          </g>
+        </svg>
+        <figcaption>The routing rule. Anything frontier-shaped goes to the paid API. Anything narration- or research-shaped goes to the homelab GPU.</figcaption>
+      </figure>
+
       <p>Buckets two and three are where local hardware wins. A single 5090 with 32 GB of VRAM can run a 30B-class model with plenty of context, and the only ongoing cost is the wattage. Once a model lives behind an OpenAI-compatible URL, anything that speaks the chat-completions protocol can call it. That includes Claude, when you give it a tool that points at the right endpoint.</p>
 
       <h2>The Hardware Behind the Endpoints</h2>
@@ -118,7 +215,7 @@ http://172.16.100.117:31800/v1
 # audio transcription (faster-whisper, OpenAI-compatible)
 http://172.16.100.117:31900/v1</code></pre>
 
-      <p>Both run from Helm charts in my <code>homelab</code> repo. The vision model is small enough to share the GPU with my agent-routing model through time-slicing, so the same 5090 also handles tool-calling work for <a href="/posts/honeypot-pentagi-bridge">PentAGI</a> and a few other agents. There is nothing exotic in the stack: vLLM, faster-whisper-server, ArgoCD, a NodePort. The interesting part is what you do with these endpoints once they exist.</p>
+      <p>The vision model is small enough to share the GPU with my agent-routing model through time-slicing, so the same 5090 also handles tool-calling work for <a href="/posts/honeypot-pentagi-bridge">PentAGI</a> and a few other agents. There is nothing exotic in the stack: vLLM, faster-whisper-server, ArgoCD, a NodePort. The interesting part is what you do with these endpoints once they exist.</p>
 
       <h2>thor-ask: Read the Screen, Read the Image</h2>
 
@@ -189,7 +286,65 @@ scene: Android home selector dialog with "ES-DE" and "AYN Launcher" options,
 
       <p>The runtime, on a single 5090, lands around twice the wall-clock duration of the source video (a 12-minute clip takes roughly two minutes, dominated by the frame caption pass). Multiply that by the ten videos I would have watched to set up the Thor and the trade is obvious. The frontier-token equivalent of the same work, with vision-token pricing on every frame, would have been comically expensive.</p>
 
-      <p>The full pipeline diagram is small enough to fit in a paragraph: yt-dlp pulls the media, ffmpeg makes a 16k mono WAV, faster-whisper transcribes, ffmpeg drops a frame every 10 seconds, the vision model captions each frame, and a tiny Python script merges everything by timestamp. There is no orchestrator, no queue, no cluster of workers. One CLI, one node, one report.</p>
+      <figure class="article-diagram">
+        <svg viewBox="0 0 760 280" role="img" aria-label="thor-vid pipeline: yt-dlp splits a video into audio and frames, Whisper transcribes audio, Qwen2.5-VL captions frames, both streams merge into a single timestamped markdown report.">
+          <!-- input -->
+          <rect class="dg-box" x="20" y="116" width="120" height="48" rx="6"/>
+          <text class="dg-text" x="40" y="140" font-size="12" font-weight="600">URL or file</text>
+          <text class="dg-muted" x="40" y="156" font-size="10">.mp4 / .mov / yt</text>
+
+          <!-- yt-dlp -->
+          <rect class="dg-box" x="180" y="116" width="100" height="48" rx="6"/>
+          <text class="dg-text" x="200" y="140" font-size="12" font-weight="600">yt-dlp</text>
+          <text class="dg-muted" x="200" y="156" font-size="10">+ ffmpeg</text>
+
+          <!-- arrow input -> yt-dlp -->
+          <path class="dg-line" d="M 140 140 L 175 140" />
+          <polygon class="dg-dim" points="175,136 183,140 175,144" />
+
+          <!-- split paths -->
+          <path class="dg-line" d="M 280 140 C 305 140, 305 60, 330 60" />
+          <path class="dg-line" d="M 280 140 C 305 140, 305 220, 330 220" />
+          <polygon class="dg-dim" points="330,56 338,60 330,64" />
+          <polygon class="dg-dim" points="330,216 338,220 330,224" />
+
+          <!-- top track: audio -->
+          <rect class="dg-box" x="338" y="36" width="120" height="48" rx="6"/>
+          <text class="dg-text" x="358" y="60" font-size="12" font-weight="600">audio.wav</text>
+          <text class="dg-muted" x="358" y="76" font-size="10">16 kHz mono</text>
+
+          <path class="dg-line" d="M 458 60 L 488 60" />
+          <polygon class="dg-dim" points="488,56 496,60 488,64" />
+
+          <rect class="dg-box-cool" x="496" y="36" width="120" height="48" rx="6"/>
+          <text class="dg-blue" x="516" y="56" font-size="10" letter-spacing="1">WHISPER</text>
+          <text class="dg-text" x="516" y="74" font-size="12" font-weight="600">transcript.json</text>
+
+          <!-- bottom track: frames -->
+          <rect class="dg-box" x="338" y="196" width="120" height="48" rx="6"/>
+          <text class="dg-text" x="358" y="220" font-size="12" font-weight="600">frames/*.jpg</text>
+          <text class="dg-muted" x="358" y="236" font-size="10">~4–8 per minute</text>
+
+          <path class="dg-line" d="M 458 220 L 488 220" />
+          <polygon class="dg-dim" points="488,216 496,220 488,224" />
+
+          <rect class="dg-box-cool" x="496" y="196" width="120" height="48" rx="6"/>
+          <text class="dg-blue" x="516" y="216" font-size="10" letter-spacing="1">QWEN2.5-VL</text>
+          <text class="dg-text" x="516" y="234" font-size="12" font-weight="600">scenes.json</text>
+
+          <!-- merge converger -->
+          <path class="dg-line" d="M 616 60 C 660 60, 660 132, 685 132" />
+          <path class="dg-line" d="M 616 220 C 660 220, 660 148, 685 148" />
+          <polygon class="dg-dim" points="685,128 693,132 685,136" />
+          <polygon class="dg-dim" points="685,144 693,148 685,152" />
+
+          <!-- output -->
+          <rect class="dg-box-accent" x="640" y="116" width="100" height="48" rx="6"/>
+          <text class="dg-amber" x="660" y="136" font-size="10" letter-spacing="1">MERGE</text>
+          <text class="dg-text" x="660" y="154" font-size="12" font-weight="600">summary.md</text>
+        </svg>
+        <figcaption>One CLI, one node, one report. yt-dlp pulls the media, ffmpeg splits audio and frames, Whisper and the VL model run in parallel, a small script merges by timestamp.</figcaption>
+      </figure>
 
       <h2>Skills, or How You Stop Reminding Claude</h2>
 
@@ -292,7 +447,7 @@ claude: [runs thor-vid on each URL]
         <li><strong>Write the skill last.</strong> The CLI has to be reliable before the skill is worth installing — a flaky tool that Claude reaches for automatically is worse than no tool at all.</li>
       </ol>
 
-      <p>The full source for <code>thor-ask</code> and <code>thor-vid</code> lives in <a href="https://github.com/kvncrw/thor-tools" target="_blank" rel="noopener">kvncrw/thor-tools</a>, the vLLM and Whisper Helm charts are in <a href="https://github.com/kvncrw/homelab" target="_blank" rel="noopener">kvncrw/homelab</a>, and the skills directory layout follows the standard <a href="https://docs.claude.com/en/docs/claude-code/skills" target="_blank" rel="noopener">Claude Code skill format</a>. Nothing here requires a special integration — it's all OpenAI-compatible HTTP and a few markdown files.</p>
+      <p>The full source for <code>thor-ask</code> and <code>thor-vid</code> lives in <a href="https://github.com/kvncrw/thor-tools" target="_blank" rel="noopener">kvncrw/thor-tools</a>, and the skills directory layout follows the standard <a href="https://docs.claude.com/en/docs/claude-code/skills" target="_blank" rel="noopener">Claude Code skill format</a>. Nothing here requires a special integration — it's all OpenAI-compatible HTTP and a few markdown files.</p>
 
       <h2>Related Posts</h2>
 
