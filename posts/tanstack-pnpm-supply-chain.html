@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TanStack, Mini Shai-Hulud, and Why You Should Vendor Your Dependencies | blog.crawley.systems</title>
+  <meta name="description" content="84 malicious @tanstack/* versions reached npm in a six-minute publish burst. Three pnpm settings buy you the time to notice. Pulling your dependencies into source control closes the door entirely.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .diagram-figure {
+      margin: 36px 0;
+      padding: 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .diagram-figure svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .diagram-figure figcaption {
+      margin-top: 14px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+    .pm-table th, .pm-table td { font-size: 0.86rem; }
+    .pm-yes { color: var(--term-green); font-weight: 600; }
+    .pm-no { color: var(--term-red); font-weight: 600; }
+    .pm-partial { color: var(--accent); font-weight: 600; }
+    .article-hero__image {
+      margin: 28px 0 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      max-width: 100%;
+    }
+    .article-hero__image img { width: 100%; display: block; }
+  </style>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="/" class="nav__logo">
+        <span class="nav__logo-bracket">[</span>blog<span class="nav__logo-dot">.</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </a>
+      <div class="nav__links">
+        <a href="https://crawley.systems">Home</a>
+        <a href="https://github.com/kvncrw" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="article-hero">
+    <div class="hero__grid-bg"></div>
+    <div class="hero__noise"></div>
+    <div class="article-hero__inner">
+      <a href="/" class="article-hero__back">&larr; All articles</a>
+      <div class="article-hero__meta">
+        <span class="post-card__date">2026-05-12</span>
+        <span class="post-card__tags">
+          <span class="tag">security</span>
+          <span class="tag">supply-chain</span>
+          <span class="tag">pnpm</span>
+          <span class="tag">npm</span>
+          <span class="tag">vendoring</span>
+        </span>
+      </div>
+      <h1 class="article-hero__title">TanStack, Mini Shai-Hulud, and Why You Should Vendor Your Dependencies</h1>
+      <p class="article-hero__subtitle">84 malicious @tanstack/* versions reached npm in a six-minute publish burst. Three pnpm settings buy you the time to notice. Pulling your dependencies into source control closes the door entirely.</p>
+      <div class="article-hero__image">
+        <img src="../blog-hero-tanstack-supply-chain.png" alt="Dark cyberpunk-styled illustration of a conveyor belt carrying glowing npm package cubes through a data center, with several cubes corrupted by toxic green light." />
+      </div>
+    </div>
+  </section>
+
+  <article class="article-body">
+    <div class="article-body__inner">
+
+      <p>On the evening of May 11, 2026, an attacker published <strong>84 malicious versions across 42 <code>@tanstack/*</code> npm packages</strong> inside a six-minute window. If you ran <code>pnpm install</code> or <code>npm ci</code> against a fresh lockfile during that window, you pulled the payload. If you didn't, you got lucky, and luck is not a security control.</p>
+
+      <p>So this post is about the controls. The TanStack team has shipped a thorough <a href="https://tanstack.com/blog/npm-supply-chain-compromise-postmortem" target="_blank" rel="noopener">postmortem</a>, the incident is now <strong>CVE-2026-45321</strong> with a CVSS of 9.6, and the same campaign torched <code>@mistralai/*</code>, <code>@squawk/*</code>, Guardrails AI, and a pair of PyPI packages on the same day. <a href="https://safedep.io/mass-npm-supply-chain-attack-tanstack-mistral/" target="_blank" rel="noopener">SafeDep</a> tallies 170+ npm packages and 404 malicious versions across both ecosystems. The threat actor is <strong>TeamPCP</strong>, the same crew behind <a href="/posts/litellm-supply-chain-attack.html">the LiteLLM PyPI compromise</a> in March. The cadence is monthly now.</p>
+
+      <p>I'll walk through the attack chain, the three pnpm settings you should turn on today (with the rough equivalents for npm, Bun, and Yarn), and then the bigger question: why I think you should start pulling your dependencies into source control, the way Meta and Google have been doing for fifteen years.</p>
+
+      <h2>The Attack Chain: Three Boring Mistakes Stacked Together</h2>
+
+      <p>How does a project with maintainer 2FA, signed commits, and SLSA provenance end up publishing 84 malicious versions in six minutes? By chaining three mistakes that every public GitHub Actions monorepo probably has at least one of.</p>
+
+      <figure class="diagram-figure">
+        <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="diag1-title">
+          <title id="diag1-title">TanStack attack chain: pwn request, cache poisoning, OIDC theft.</title>
+          <defs>
+            <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b" />
+            </marker>
+            <marker id="arrowred" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#ef4444" />
+            </marker>
+          </defs>
+          <rect x="0" y="0" width="880" height="360" fill="#0a0a0b" />
+          <!-- lane 1: attacker fork -->
+          <text x="20" y="28" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">STAGE 1 / PWN REQUEST</text>
+          <rect x="20" y="48" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="40" y="76" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">Attacker fork</text>
+          <text x="40" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">commit prefixed [skip ci]</text>
+          <text x="40" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">+ 30k-line vite_setup.mjs</text>
+          <text x="40" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444">PR opens against main</text>
+
+          <path d="M 260,98 L 332,98" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow1)" />
+
+          <rect x="340" y="48" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="360" y="76" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">bundle-size.yml</text>
+          <text x="360" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">trigger: pull_request_target</text>
+          <text x="360" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">checks out PR tree</text>
+          <text x="360" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">runs pnpm install (base perms)</text>
+
+          <path d="M 580,98 L 652,98" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow1)" />
+
+          <rect x="660" y="48" width="200" height="100" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="680" y="76" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">STAGE 2 / CACHE</text>
+          <text x="680" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">1.1 GB poisoned cache</text>
+          <text x="680" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">key matches release.yml</text>
+          <text x="680" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#22c55e">saved, waits 8 hours</text>
+
+          <!-- lane 2: legit run -->
+          <text x="20" y="190" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">STAGE 3 / OIDC THEFT</text>
+          <rect x="20" y="210" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="40" y="238" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">Maintainer pushes to main</text>
+          <text x="40" y="260" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">release.yml fires</text>
+          <text x="40" y="278" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">actions/cache restore</text>
+          <text x="40" y="296" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444">poisoned tree loaded</text>
+
+          <path d="M 260,260 L 332,260" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrowred)" />
+
+          <rect x="340" y="210" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="360" y="238" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">Runner.Worker memdump</text>
+          <text x="360" y="260" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">scan /proc/*/cmdline</text>
+          <text x="360" y="278" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">read process memory</text>
+          <text x="360" y="296" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444">extract OIDC publish token</text>
+
+          <path d="M 580,260 L 652,260" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrowred)" />
+
+          <rect x="660" y="210" width="200" height="100" rx="6" fill="#141416" stroke="#ef4444" stroke-width="2" />
+          <text x="680" y="238" font-family="Outfit, sans-serif" font-size="14" fill="#ef4444" font-weight="600">npm publish x84</text>
+          <text x="680" y="260" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">19:20 - 19:26 UTC</text>
+          <text x="680" y="278" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">42 packages</text>
+          <text x="680" y="296" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">valid SLSA provenance</text>
+        </svg>
+        <figcaption>// the three-stage trust chain — none of these are zero-days</figcaption>
+      </figure>
+
+      <p>The first mistake was the <code>pull_request_target</code> trigger on a workflow that ran untrusted fork code. That's the <a href="https://securitylab.github.com/research/github-actions-preventing-pwn-requests/" target="_blank" rel="noopener">classic Pwn Request</a> pattern, and it gave the attacker code execution with base-repo permissions just by opening a PR. The second mistake was trusting the GitHub Actions cache as if it were namespaced. It isn't. A poisoned cache from a fork-triggered run sits in the same key space as the cache the release pipeline restores, and the release pipeline restored it.</p>
+
+      <p>The third mistake is the one that should worry every npm maintainer reading this. When <code>release.yml</code> ran with the poisoned cache loaded, the attacker's binaries scanned <code>/proc/*/cmdline</code> for the GitHub Actions <code>Runner.Worker</code> process, dumped its memory, and pulled out the short-lived OIDC token that npm uses to authenticate publishes. They then published directly to the registry, bypassing the workflow's own publish step entirely. Because the token was valid and freshly minted, the malicious versions came with <em>valid SLSA provenance</em>.</p>
+
+      <div class="callout callout--danger">
+        <div class="callout__title">SLSA provenance did not save you here</div>
+        <p>If your supply chain story is "we only install packages with verified provenance," this attack walked through that. The token doing the publish was the real publisher's token. The build attestation was real. The compromise happened inside the trusted CI environment, with the trusted credential, in the trusted pipeline. Provenance is useful, but it is not a stand-alone control.</p>
+      </div>
+
+      <p>The payload itself is exactly what you'd expect: a ~2.3 MB obfuscated <code>router_init.js</code> that runs at install time, vacuums AWS keys, GCP service account JSON, kubeconfigs, Vault tokens, GitHub PATs, npm tokens, SSH keys, and shell history off the host, then exfiltrates over the Session Protocol CDN and GitHub's own GraphQL API to blend with normal CI traffic. The <a href="https://semgrep.dev/blog/2026/tanstack-router-packages-hit-by-coordinated-supply-chain-attack/" target="_blank" rel="noopener">Semgrep</a>, <a href="https://www.stepsecurity.io/blog/mini-shai-hulud-is-back-a-self-spreading-supply-chain-attack-hits-the-npm-ecosystem" target="_blank" rel="noopener">StepSecurity</a>, and <a href="https://www.wiz.io/blog/mini-shai-hulud-strikes-again-tanstack-more-npm-packages-compromised" target="_blank" rel="noopener">Wiz</a> writeups all dig into the payload mechanics if you want the deep dive.</p>
+
+      <h2 id="defenses">What Would Have Saved You on the Consumer Side</h2>
+
+      <p>The publisher-side fixes are TanStack's problem, and they've already shipped them: kill <code>pull_request_target</code>, scope OIDC tokens narrowly, isolate the release runner. The question for the rest of us is simpler. If you'd run <code>pnpm install</code> at 19:23 UTC on May 11, what configuration would have spared you the breach?</p>
+
+      <p>The answer is a small set of package manager settings that have existed for a while and that almost nobody had turned on. pnpm 11 (<a href="https://pnpm.io/blog/releases/11.0" target="_blank" rel="noopener">released April 28, 2026</a>, two weeks before the TanStack publish) flipped most of them on by default. If you're still on pnpm 10, or on npm or Yarn, you have to opt in. Do it today.</p>
+
+      <h3>1. <code>minimumReleaseAge</code> — let other people get owned first</h3>
+
+      <p>The single highest-value setting in pnpm 11 is <code>minimumReleaseAge</code>. It refuses to resolve any version of any package that was published less than N minutes ago. The pnpm 11 default is <code>1440</code>, or 24 hours.</p>
+
+      <pre><code><span class="code-label">pnpm-workspace.yaml</span>
+# Refuse versions published in the last 3 days.
+# Bump to 10080 for a one-week delay if you can stomach it.
+minimumReleaseAge: 4320
+
+# Escape hatch: dependencies you trust to install immediately.
+# Use sparingly. Anything in here is *not* protected.
+minimumReleaseAgeExclude:
+  - "@my-org/*"</code></pre>
+
+      <p>This is not clever. It's just patience. The TanStack payload was live for about 20 minutes before external detection, and the bad versions were yanked within hours. Anyone running <code>minimumReleaseAge: 1440</code> never resolved the malicious versions, because by the time their lockfile was allowed to bump, the bad versions were gone.</p>
+
+      <p>Every modern registry compromise has the same shape. The attacker publishes. Somebody notices. The registry yanks. The window where the bad version is the latest version is almost always under 24 hours. The one-week setting is better, and the only thing it costs you is a week of not having the new features — which you weren't going to ship to production this week anyway.</p>
+
+      <h3>2. <code>strictDepBuilds</code> + <code>allowBuilds</code> — kill install-time execution</h3>
+
+      <p>This is the setting that shuts down most install-time payloads, including the TanStack one, on the consumer side. Postinstall scripts and native build steps are where the malicious code runs. If your package manager refuses to run those scripts unless you've explicitly allowlisted the package, the payload never executes.</p>
+
+      <pre><code><span class="code-label">pnpm-workspace.yaml</span>
+# Fail the install if any transitive dep wants to run a build script
+# that isn't explicitly allowed. Hard gate, not a warning.
+strictDepBuilds: true
+
+# The ONLY packages allowed to run install-time scripts.
+# Everything else is a silent no-op.
+allowBuilds:
+  - "esbuild"
+  - "@swc/core"
+  - "sharp"
+  - "node-gyp"</code></pre>
+
+      <p>pnpm 10 disabled postinstall scripts by default and printed a warning. <code>strictDepBuilds</code> upgrades the warning to a hard failure: if any package in your tree wants to run a build script and isn't in <code>allowBuilds</code>, the install errors out and tells you which package. You then make a deliberate choice to allow it, or you don't, and the package installs without its scripts ever firing.</p>
+
+      <p>For the overwhelming majority of npm packages, "doesn't execute its install scripts" is functionally identical to "does execute them" — those scripts are no-ops, telemetry pings, or unnecessary native builds. The packages that genuinely need install-time builds (native bindings, ABI shims) are a short, well-known list. Allowlist them by hand and revisit the list when you add a real dependency.</p>
+
+      <h3>3. <code>blockExoticSubdeps</code> — close the git/tarball back door</h3>
+
+      <p>This one isn't tied to the TanStack incident, but it's the next hole. npm and pnpm both let a dependency declare its own dependencies as git URLs or arbitrary tarball URLs. A package you trust can transitively pull in <code>{"some-helper": "git+https://github.com/random-person/lib.git#main"}</code>, and that "package" is whatever the URL serves today.</p>
+
+      <pre><code><span class="code-label">pnpm-workspace.yaml</span>
+# Refuse transitive deps that aren't on the registry.
+# Default in pnpm 11. Set it explicitly anyway so it's auditable.
+blockExoticSubdeps: true
+
+# Bonus: refuse silent trust downgrades.
+trustPolicy: "no-downgrade"</code></pre>
+
+      <p>Every incident report I read ends with a footnote about "three more packages doing weird things with git URLs." Cut it off at the package manager. The registry is the only ingress.</p>
+
+      <h3>Minimum pnpm config, copy-pasteable</h3>
+
+      <pre><code><span class="code-label">pnpm-workspace.yaml — the bare minimum</span>
+minimumReleaseAge: 4320         # 3 days
+minimumReleaseAgeExclude:
+  - "@my-org/*"
+strictDepBuilds: true
+blockExoticSubdeps: true
+trustPolicy: "no-downgrade"
+allowBuilds:
+  # add only what your build actually requires
+  - "esbuild"</code></pre>
+
+      <h2>What About npm, Bun, and Yarn?</h2>
+
+      <p>pnpm is ahead of the field on this, but every package manager has at least a partial answer. The shape of the controls is the same everywhere: turn off install scripts globally, allowlist what you actually need, and gate by publish age either in the package manager or in CI.</p>
+
+      <figure class="diagram-figure">
+        <table class="pm-table">
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>pnpm 11</th>
+              <th>npm 10+</th>
+              <th>Bun 1.x</th>
+              <th>Yarn 4</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Block install scripts by default</td>
+              <td class="pm-yes">on (allowBuilds)</td>
+              <td class="pm-partial">--ignore-scripts</td>
+              <td class="pm-partial">trustedDependencies</td>
+              <td class="pm-partial">enableScripts: false</td>
+            </tr>
+            <tr>
+              <td>Minimum release age</td>
+              <td class="pm-yes">1440 default</td>
+              <td class="pm-no">none native</td>
+              <td class="pm-no">none native</td>
+              <td class="pm-no">none native</td>
+            </tr>
+            <tr>
+              <td>Block exotic subdeps (git/tarball)</td>
+              <td class="pm-yes">on by default</td>
+              <td class="pm-no">no</td>
+              <td class="pm-no">no</td>
+              <td class="pm-partial">constraints engine</td>
+            </tr>
+            <tr>
+              <td>Explicit build allowlist</td>
+              <td class="pm-yes">allowBuilds</td>
+              <td class="pm-no">global flag only</td>
+              <td class="pm-yes">trustedDependencies</td>
+              <td class="pm-partial">plugin</td>
+            </tr>
+            <tr>
+              <td>Lockfile signed by registry</td>
+              <td class="pm-partial">opt-in</td>
+              <td class="pm-partial">opt-in</td>
+              <td class="pm-no">no</td>
+              <td class="pm-partial">opt-in</td>
+            </tr>
+          </tbody>
+        </table>
+        <figcaption>// matrix of supply-chain controls across package managers (May 2026)</figcaption>
+      </figure>
+
+      <p>For npm, the simplest move is <code>ignore-scripts=true</code> in <code>.npmrc</code> at every repo root, plus a CI gate that lints the lockfile against publish-age timestamps before <code>npm ci</code>. Socket, Snyk, and StepSecurity all ship this as a pipeline policy. For Bun, set an empty <code>trustedDependencies</code> array in <code>package.json</code> and revisit it the first time a real install errors out. For Yarn 4, flip <code>enableScripts</code> off in <code>.yarnrc.yml</code>.</p>
+
+      <h2 id="vendoring">The Bigger Pivot: Pull Your Dependencies Into Source Control</h2>
+
+      <p>The settings above buy you time and remove the easiest exploit primitive. They do not solve the underlying problem. Every <code>pnpm install</code> is still an unaudited code drop from a public registry into your build. Every CI run, every developer laptop, every container build. You have no idea what changed between yesterday's lockfile and today's beyond the version numbers. The lockfile pins a hash. It does not pin a diff.</p>
+
+      <p>Want to see what the alternative looks like? It's what Meta has been doing for fifteen years.</p>
+
+      <figure class="diagram-figure">
+        <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="diag2-title">
+          <title id="diag2-title">Registry-resolved vs vendored dependency flow.</title>
+          <rect x="0" y="0" width="880" height="300" fill="#0a0a0b" />
+          <text x="20" y="28" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">REGISTRY-RESOLVED (TODAY)</text>
+          <rect x="20" y="48" width="160" height="60" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="100" y="84" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">your repo</text>
+          <text x="200" y="84" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
+          <rect x="220" y="48" width="160" height="60" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="300" y="78" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">pnpm install</text>
+          <text x="300" y="96" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">at build time</text>
+          <text x="400" y="84" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
+          <rect x="420" y="48" width="200" height="60" rx="6" fill="#141416" stroke="#ef4444" />
+          <text x="520" y="78" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#ef4444">public registry</text>
+          <text x="520" y="96" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">mutable, unaudited</text>
+          <text x="640" y="84" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
+          <rect x="660" y="48" width="200" height="60" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="760" y="84" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">node_modules/</text>
+
+          <line x1="20" y1="148" x2="860" y2="148" stroke="#27272a" stroke-dasharray="4 4" />
+
+          <text x="20" y="180" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">VENDORED (META PATTERN)</text>
+          <rect x="20" y="200" width="160" height="60" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="100" y="226" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">your repo</text>
+          <text x="100" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#22c55e">+ third-party/</text>
+          <text x="200" y="234" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
+          <rect x="220" y="200" width="240" height="60" rx="6" fill="#141416" stroke="#22c55e" />
+          <text x="340" y="226" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#22c55e">reviewed diff at upgrade</text>
+          <text x="340" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">human eyes on the bytes</text>
+          <text x="480" y="234" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
+          <rect x="500" y="200" width="180" height="60" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="590" y="226" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">build (offline)</text>
+          <text x="590" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">no network for deps</text>
+          <text x="700" y="234" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
+          <rect x="720" y="200" width="140" height="60" rx="6" fill="#141416" stroke="#27272a" />
+          <text x="790" y="234" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">artifact</text>
+        </svg>
+        <figcaption>// two trust models for the same install step</figcaption>
+      </figure>
+
+      <p>Inside Meta's monorepo, third-party dependencies don't live in a <code>node_modules/</code> resolved at install time from a public registry. They live as checked-in source code in <code>third-party/</code>, reviewed when they were first added, diffed when they're upgraded, owned by humans whose names are in the OWNERS file. When a CVE drops in a package, an engineer opens a diff against the vendored copy in the monorepo, reviews it, and lands it. The build does not talk to npm. The build talks to the monorepo.</p>
+
+      <p>This sounds extreme until you realize it's how Linux, Go, and most large Rust projects already operate. Go pushed the industry back toward vendoring a decade ago with <code>go mod vendor</code>. Rust has <code>cargo vendor</code>. The Linux kernel vendors. The JavaScript ecosystem is the outlier here, not the rule, and the cadence of registry compromises is making that look like the unforced error it always was.</p>
+
+      <div class="callout callout--warning">
+        <div class="callout__title">Vendoring is not a silver bullet</div>
+        <p>If you vendor <code>@tanstack/react-router</code> on May 10 and then bump the vendored copy on May 11 by blindly re-running an import script against npm, you pull the malicious version straight into your repo. The defense is the <em>review step</em>: someone looks at the diff, sees a 30,000-line obfuscated <code>router_init.js</code> that was not there yesterday, and rejects the bump. That review only happens if vendoring is structured as "manually approved import," not "git-add the new <code>node_modules/</code>." Treat the upgrade as the security event, not the install.</p>
+      </div>
+
+      <p>What vendoring actually buys you:</p>
+
+      <ul>
+        <li><strong>Diff-time review.</strong> Every dependency upgrade is a PR with real code in it. A 2.3 MB obfuscated payload is wildly visible in a diff. It's invisible in a lockfile bump.</li>
+        <li><strong>Reproducible builds without registry trust.</strong> Your build doesn't need npm to be up, honest, or uncompromised. The code is in your repo. You can rebuild from a five-year-old commit on an air-gapped network.</li>
+        <li><strong>CVE response without panic.</strong> When the next compromise hits — and there will be one within weeks — you grep your vendored tree, patch the vendored copy, and ship. No archaeology over "did our lockfile resolve to the bad version last Tuesday."</li>
+        <li><strong>Forced minimalism.</strong> When adding a dependency means "I commit 40 MB to the repo and own its security forever," people stop pulling in <code>is-odd</code> as a transitive of a transitive.</li>
+      </ul>
+
+      <p>The tooling is workable. <a href="https://yarnpkg.com/features/zero-installs" target="_blank" rel="noopener">Yarn Berry's Zero-Installs</a> mode commits the resolved tree into the repo. pnpm has <code>pnpm fetch</code> and offline mirrors. For non-trivial projects, you write a small script that re-vendors from a private mirror at upgrade time and runs a diff against the previous tree. It isn't glamorous. It's also not hard.</p>
+
+      <p>I'm starting to do this on my own projects this week. The package managers aren't evil — pnpm in particular is doing the right thing with the v11 defaults — but I no longer trust the registry-to-build path as a primitive. <a href="/posts/litellm-supply-chain-attack.html">LiteLLM in March</a>, <a href="/posts/bitwarden-cli-supply-chain-defense.html">Bitwarden CLI in April</a>, TanStack and Mistral yesterday. The pattern is constant and the cadence is accelerating.</p>
+
+      <h2>What to Do This Week</h2>
+
+      <ol>
+        <li><strong>Grep your lockfiles against the IOC list.</strong> TanStack's postmortem, StepSecurity, and Snyk all publish package-and-version IOCs. If you find a hit, rotate every credential reachable from the affected install host — npm tokens, GitHub PATs, AWS keys, kubeconfigs, Vault tokens, SSH keys, the lot.</li>
+        <li><strong>Upgrade to pnpm 11 today.</strong> Set <code>minimumReleaseAge: 4320</code>, <code>strictDepBuilds: true</code>, write your <code>allowBuilds</code>. If you can't move to pnpm 11, set <code>ignore-scripts=true</code> in <code>.npmrc</code> and add a CI step that fails on packages younger than your threshold.</li>
+        <li><strong>Audit your <code>pull_request_target</code> workflows.</strong> Anywhere you check out PR code with base-repo permissions, you have a Pwn Request waiting. Drop to <code>pull_request</code>, or gate execution on <code>github.event.pull_request.head.repo.full_name == github.repository</code>.</li>
+        <li><strong>Stop trusting GitHub Actions cache for security-bearing inputs.</strong> The cache key namespace is shared between forks and base. Treat anything coming out of <code>actions/cache</code> as attacker-controlled.</li>
+        <li><strong>Scope your npm publish tokens narrowly.</strong> Trusted-publisher OIDC tokens scoped to a single package, not a personal token with org-wide write. The TanStack token could publish anything under the scope.</li>
+        <li><strong>Start the vendoring conversation.</strong> Not next quarter. This week. Pick one critical dependency, vendor it as a pilot, get the muscle.</li>
+      </ol>
+
+      <h2>The Trust Pivot</h2>
+
+      <p>The npm and PyPI registries have been the most consequential pieces of infrastructure in software engineering for fifteen years, and they were built on a trust model that no longer fits the threat model. The model was: the maintainer is a real person, the package they publish is the code they wrote, the registry hands it to you faithfully. Each of those three legs has been broken on camera in the last six months. Maintainer machines get owned (LiteLLM). Maintainer publish credentials get stolen from their own CI (TanStack). Lookalike packages get published into the same namespace as the real ones.</p>
+
+      <p>The defenses we've been bolting on — provenance, signing, 2FA on publish — assumed the failure happens before publish. The TanStack attack happened <em>at</em> publish, with valid provenance and a valid token, and they all failed open. The pnpm v11 defaults are the right kind of pivot: less "verify upstream is good" and more "assume upstream is bad and minimize what code execution costs me." That framing has to be the new baseline. Wait before you install. Don't run scripts you didn't allowlist. Don't accept code from anywhere but the registry. Don't trust the registry to be uncompromised. And, increasingly, don't trust the registry to be in the build path at all — vendor what you depend on, review the diffs, own the code.</p>
+
+      <p>None of this is free. The whole point of npm was that it was free. The bill on that has been arriving in twenty-minute publish windows roughly once a month, and you pay it in incident response hours, credential rotations, and customer-facing apologies. The cheapest version of paying it is the boring one. Turn on the three settings. Write the allowlist. Start moving the dependencies you actually depend on into your own repo.</p>
+
+      <hr>
+
+      <div class="article-author">
+        <div class="article-author__avatar">KC</div>
+        <div class="article-author__info">
+          <h4>Kevin Crawley</h4>
+          <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <span class="footer__logo">
+        <span class="nav__logo-bracket">[</span>crawley<span class="nav__logo-dot">.</span>systems<span class="nav__logo-bracket">]</span>
+      </span>
+      <span class="footer__copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+    </div>
+  </footer>
+
+  <script src="../main.js"></script>
+</body>
+</html>
