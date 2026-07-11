@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,15 +24,6 @@
   --sq2:#fbbf24; --sq4:#f59e0b; --sq5:#d97706; --sq6:#b45309; --sq7:#92400e;
   --good:#22c55e; --warn:#f59e0b; --crit:#ef4444;
   --code-bg:#18181b; --hb-lab:170px; --hb-valw:150px;
-}
-html[data-theme="light"]{
-  --page:#f7f6f3; --surface:#fcfbf8; --ink:#18181b; --ink2:#52525b; --muted:#71717a;
-  --grid:#e7e5e0; --axis:#d6d3cd; --ring:rgba(24,24,27,.10);
-  --accent:#b45309; --accent-dim:#92400e; --accent-glow:rgba(180,83,9,.12);
-  --s1:#b45309; --s2:#2563eb; --s3:#0d9488; --s4:#dc2626; --s5:#7c3aed; --s6:#15803d;
-  --sq2:#f59e0b; --sq4:#d97706; --sq5:#b45309; --sq6:#92400e; --sq7:#78350f;
-  --good:#15803d; --warn:#b45309; --crit:#dc2626;
-  --code-bg:#efede8;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
@@ -68,10 +59,9 @@ header.hero{border-bottom:1px solid var(--grid);
     repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in oklab, var(--grid) 55%, transparent) 79px 80px)}
 .hero-in{max-width:1120px;margin:0 auto;padding:56px 24px 40px;position:relative;
   display:grid;grid-template-columns:minmax(0,1fr) clamp(360px,42%,520px);gap:40px;align-items:center}
-.hero-img{width:100%;max-height:none;align-self:center;
-  filter:drop-shadow(0 0 56px var(--accent-glow));
-  -webkit-mask-image:radial-gradient(ellipse 78% 86% at 50% 50%, #000 55%, transparent 88%);
-  mask-image:radial-gradient(ellipse 78% 86% at 50% 50%, #000 55%, transparent 88%)}
+.hero-img{width:100%;align-self:center;mix-blend-mode:lighten;
+  -webkit-mask-image:radial-gradient(ellipse 72% 82% at 50% 50%, #000 50%, transparent 92%);
+  mask-image:radial-gradient(ellipse 72% 82% at 50% 50%, #000 50%, transparent 92%)}
 .hero-note{max-width:62ch;color:var(--muted);font-size:.88em;margin-top:10px}
 @media(max-width:900px){.hero-in{grid-template-columns:minmax(0,1fr)}.hero-img{max-width:380px;max-height:480px;order:-1;justify-self:center}}
 .hero-kicker{display:flex;align-items:center;gap:8px;font-size:.78em;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}.hero-kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 2.4s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -81,9 +71,6 @@ h1{font-size:clamp(1.7em,4vw,2.6em);line-height:1.15;margin:.35em 0 .5em;max-wid
 .hero-how{max-width:62ch;margin-top:20px;padding:14px 18px;background:var(--surface);
   border:1px solid var(--ring);border-radius:12px;font-size:.9em;color:var(--ink2)}
 .hero-how b{color:var(--ink)}
-#themeBtn{position:absolute;top:26px;right:24px;background:var(--surface);color:var(--ink2);
-  border:1px solid var(--ring);border-radius:999px;padding:7px 14px;cursor:pointer;font:inherit;font-size:.8em}
-#themeBtn:hover{color:var(--ink)}
 .hero-back{display:inline-block;margin-bottom:22px;font-size:.8em;color:var(--muted);border:none}
 .hero-back:hover{color:var(--accent)}
 
@@ -248,7 +235,6 @@ figure.viz svg{width:100%;height:auto;display:block}
 <body>
 <header class="hero">
   <div class="hero-in">
-    <button id="themeBtn" aria-label="toggle theme">◐ theme</button>
     <div class="hero-main">
       <a class="hero-back" href="https://blog.crawley.systems/">[crawley.systems] ← blog</a>
       <div class="hero-kicker"><span class="dot"></span>Special feature · Field guide · the Spark estate</div>
@@ -257,7 +243,7 @@ figure.viz svg{width:100%;height:auto;display:block}
       <p class="hero-note">Fair warning: despite the four-node estate, multi-node training gets only a short tour (Part VII and Stage 4). Nearly everything in this guide runs on a single Spark.</p>
       <div class="hero-how"><b>How to use this:</b> Parts I–IX are the theory, in dependency order, each part assumes only the ones before it. Part X maps the tools. Part XI is the hands-on curriculum we'll execute together. Part XII is a glossary for looking things up later. Skim on first read; nothing here needs to be memorized, because the curriculum revisits everything with your hands on a keyboard.</div>
     </div>
-    <img class="hero-img" src="dgx-sparks-hero-v2.webp" alt="Four NVIDIA DGX Spark units stacked two by two under warm amber studio light" loading="eager">
+    <img class="hero-img" src="dgx-sparks-hero-v3.webp" alt="Four NVIDIA DGX Spark units stacked two by two under warm amber studio light" loading="eager">
   </div>
 </header>
 <div class="wrap">
@@ -474,12 +460,6 @@ figure.viz svg{width:100%;height:auto;display:block}
 </footer>
 <div id="tip" role="tooltip"></div>
 <script>
-// theme
-const root=document.documentElement, btn=document.getElementById('themeBtn');
-const pref=localStorage.getItem('theme')||'dark';
-root.dataset.theme=pref;
-btn.onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';
-  localStorage.setItem('theme',root.dataset.theme)};
 // tooltip
 const tip=document.getElementById('tip');
 document.addEventListener('pointerover',e=>{
