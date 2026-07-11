@@ -230,6 +230,15 @@ figure.viz svg{width:100%;height:auto;display:block}
 .gl-term{font-weight:680;display:block}
 .gl-def{color:var(--ink2)}
 
+/* footer */
+.footer{border-top:1px solid var(--grid);margin-top:40px}
+.footer-in{max-width:1120px;margin:0 auto;padding:28px 24px;display:flex;
+  justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.footer-logo{font-size:.85em;font-weight:600;color:var(--ink2);border:none}
+.footer-logo:hover{color:var(--accent)}
+.footer-dot{color:var(--accent)}
+.footer-copy{font-size:.78em;color:var(--muted)}
+
 /* tooltip */
 #tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--page);
   font-size:.76em;line-height:1.4;padding:6px 10px;border-radius:8px;max-width:280px;
@@ -457,6 +466,12 @@ figure.viz svg{width:100%;height:auto;display:block}
 <p class="closing">Say "go stage 0" whenever you're ready.</p>
 </section></main>
 </div>
+<footer class="footer">
+  <div class="footer-in">
+    <a class="footer-logo" href="https://blog.crawley.systems/">[blog<span class="footer-dot">.</span>crawley<span class="footer-dot">.</span>systems]</a>
+    <span class="footer-copy">&copy; 2026 Kevin Crawley. All rights reserved.</span>
+  </div>
+</footer>
 <div id="tip" role="tooltip"></div>
 <script>
 // theme
