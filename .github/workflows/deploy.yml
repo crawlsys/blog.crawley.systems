@@ -12,9 +12,11 @@ permissions:
 
 jobs:
   deploy:
-    # Self-hosted ARC runner (kvncrw-crawley-systems scale set on coredump).
-    # CF API token is IP-restricted to the home network, so GitHub-hosted
-    # runners get "Cannot use the access token from location" errors.
+    # Self-hosted ARC runner (kvncrw-crawley-systems scale set on cloudy-k3s,
+    # defined in crawlsys/homelab argo/charts/arc-runners). CF API token is
+    # IP-restricted to the home network, so GitHub-hosted runners get
+    # "Cannot use the access token from location" errors. Moved off the
+    # coredump WSL2 static runner 2026-07-11 (WSL idles out -> runner offline).
     runs-on: kvncrw-crawley-systems
     environment:
       name: production
