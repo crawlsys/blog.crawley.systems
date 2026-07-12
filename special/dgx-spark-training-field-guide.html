@@ -96,6 +96,21 @@ li::marker{color:var(--muted)}
   color:var(--muted);font-weight:700;margin-bottom:2px}
 .callout.res{border-left:3px solid var(--accent-dim)}
 .callout.link{border-left:3px solid var(--accent-dim)}
+.callout.check{border-left:3px solid var(--good);background:color-mix(in oklab,var(--good) 7%,var(--surface))}
+.callout.warn{border-left:3px solid var(--warn);background:color-mix(in oklab,var(--warn) 7%,var(--surface))}
+.callout.why{border-left:3px solid var(--accent);background:color-mix(in oklab,var(--accent) 6%,var(--surface))}
+
+/* substep headings + code blocks with run/output labels */
+h4.substep{font-size:.98em;font-weight:680;margin:1.6em 0 .5em;color:var(--ink);
+  padding-bottom:6px;border-bottom:1px solid var(--grid)}
+.codewrap{margin:1.1em 0}
+.codewrap pre{margin:0}
+.code-tag{display:inline-block;font-size:.68em;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:7px 7px 0 0;
+  background:var(--accent-dim);color:#fff;border:1px solid var(--ring);border-bottom:none}
+.code-tag-out{background:var(--surface);color:var(--muted)}
+.code-console pre{border-top-left-radius:0;border-color:var(--accent-dim)}
+.code-output pre{border-top-left-radius:0;background:var(--page);color:var(--ink2);border-style:dashed}
 
 /* tables */
 .table-wrap{overflow-x:auto;margin:1.2em 0;border:1px solid var(--ring);border-radius:12px;background:var(--surface)}
@@ -247,7 +262,7 @@ figure.viz svg{width:100%;height:auto;display:block}
   </div>
 </header>
 <div class="wrap">
-  <nav class="toc" aria-label="contents"><a href="#part-i-the-mental-model-what-a-language-model-actually-is"><span class="toc-eyebrow">Part I</span><span>The mental model: what a language model actually is</span></a><a href="#part-ii-your-hardware-demystified"><span class="toc-eyebrow">Part II</span><span>Your hardware, demystified</span></a><a href="#part-iii-the-training-loop-for-real-this-time"><span class="toc-eyebrow">Part III</span><span>The training loop, for real this time</span></a><a href="#part-iv-the-taxonomy-of-training"><span class="toc-eyebrow">Part IV</span><span>The taxonomy of training</span></a><a href="#part-v-peft-how-finetuning-became-affordable"><span class="toc-eyebrow">Part V</span><span>PEFT: how finetuning became affordable</span></a><a href="#part-vi-quantization-the-estates-native-tongue"><span class="toc-eyebrow">Part VI</span><span>Quantization: the estate's native tongue</span></a><a href="#part-vii-distributed-training-making-4-sparks-act-as-one"><span class="toc-eyebrow">Part VII</span><span>Distributed training: making 4 Sparks act as one</span></a><a href="#part-viii-data-the-part-that-actually-determines-quality"><span class="toc-eyebrow">Part VIII</span><span>Data: the part that actually determines quality</span></a><a href="#part-ix-evaluation-knowing-whether-you-made-it-better-or-wor"><span class="toc-eyebrow">Part IX</span><span>Evaluation: knowing whether you made it better or worse</span></a><a href="#part-x-the-toolbox-mapped"><span class="toc-eyebrow">Part X</span><span>The toolbox, mapped</span></a><a href="#part-xi-the-curriculum-what-well-actually-do"><span class="toc-eyebrow">Part XI</span><span>The curriculum (what we'll actually do)</span></a><a href="#part-xii-glossary-fridge-door-edition"><span class="toc-eyebrow">Part XII</span><span>Glossary (fridge-door edition)</span></a><a href="#appendix-the-reading-shelf-ranked"><span class="toc-eyebrow">Appendix</span><span>The reading shelf, ranked</span></a></nav>
+  <nav class="toc" aria-label="contents"><a href="#part-i-the-mental-model-what-a-language-model-actually-is"><span class="toc-eyebrow">Part I</span><span>The mental model: what a language model actually is</span></a><a href="#part-ii-your-hardware-demystified"><span class="toc-eyebrow">Part II</span><span>Your hardware, demystified</span></a><a href="#part-iii-the-training-loop-for-real-this-time"><span class="toc-eyebrow">Part III</span><span>The training loop, for real this time</span></a><a href="#part-iv-the-taxonomy-of-training"><span class="toc-eyebrow">Part IV</span><span>The taxonomy of training</span></a><a href="#part-v-peft-how-finetuning-became-affordable"><span class="toc-eyebrow">Part V</span><span>PEFT: how finetuning became affordable</span></a><a href="#part-vi-quantization-the-estates-native-tongue"><span class="toc-eyebrow">Part VI</span><span>Quantization: the estate's native tongue</span></a><a href="#part-vii-distributed-training-making-4-sparks-act-as-one"><span class="toc-eyebrow">Part VII</span><span>Distributed training: making 4 Sparks act as one</span></a><a href="#part-viii-data-the-part-that-actually-determines-quality"><span class="toc-eyebrow">Part VIII</span><span>Data: the part that actually determines quality</span></a><a href="#part-ix-evaluation-knowing-whether-you-made-it-better-or-wor"><span class="toc-eyebrow">Part IX</span><span>Evaluation: knowing whether you made it better or worse</span></a><a href="#part-x-the-toolbox-mapped"><span class="toc-eyebrow">Part X</span><span>The toolbox, mapped</span></a><a href="#part-xi-the-curriculum-hands-on-a-keyboard"><span class="toc-eyebrow">Part XI</span><span>The curriculum (hands on a keyboard)</span></a><a href="#part-xii-glossary-fridge-door-edition"><span class="toc-eyebrow">Part XII</span><span>Glossary (fridge-door edition)</span></a><a href="#appendix-the-reading-shelf-ranked"><span class="toc-eyebrow">Appendix</span><span>The reading shelf, ranked</span></a></nav>
   <main><section class="part" id="part-i-the-mental-model-what-a-language-model-actually-is"><div class="eyebrow">Part I</div><h2>The mental model: what a language model actually is</h2>
 <h3 id="i1-next-token-prediction-is-the-whole-game" class="">I.1 Next-token prediction is the whole game</h3>
 <p>A <strong>language model (LM)</strong> is a function that takes a sequence of text and outputs a probability for every possible <em>next</em> piece of text. That's it. "The cat sat on the ___" → {mat: 9%, floor: 7%, couch: 5%, ...}. Generation is just running this in a loop: predict, pick, append, repeat.</p>
@@ -291,13 +306,13 @@ figure.viz svg{width:100%;height:auto;display:block}
 </section>
 <section class="part" id="part-iii-the-training-loop-for-real-this-time"><div class="eyebrow">Part III</div><h2>The training loop, for real this time</h2>
 <p>This is the part to actually internalize. Every training framework, from nanoGPT's 300 lines to a trillion-parameter lab run, is this loop:</p>
-<pre><code>for each batch of examples:
+<div class="codewrap "><pre><code>for each batch of examples:
     1. FORWARD:  run the batch through the model → predictions
     2. LOSS:     measure how wrong the predictions are → one number
     3. BACKWARD: compute, for every parameter, "which direction would
                  reduce the loss?" → gradients (backpropagation)
     4. STEP:     nudge every parameter a tiny bit in that direction
-                 (the optimizer does this), then zero the gradients</code></pre>
+                 (the optimizer does this), then zero the gradients</code></pre></div>
 <figure class="viz"><figcaption><span class="viz-title">The training loop</span><span class="viz-sub">The four beats every framework plays, forever</span></figcaption><div class="loop"><div class="loop-step"><span class="loop-k">1 · FORWARD</span><span class="loop-d">run the batch through the model → predictions</span></div><span class=loop-arrow>→</span><div class="loop-step"><span class="loop-k">2 · LOSS</span><span class="loop-d">measure how wrong → one number (cross-entropy)</span></div><span class=loop-arrow>→</span><div class="loop-step"><span class="loop-k">3 · BACKWARD</span><span class="loop-d">gradients for every parameter (backprop)</span></div><span class=loop-arrow>→</span><div class="loop-step"><span class="loop-k">4 · STEP</span><span class="loop-d">optimizer nudges weights, zero the gradients</span></div></div><div class="loop-return">↺ repeat for every batch, this loop <em>is</em> training, from nanoGPT's 300 lines to a trillion-parameter lab run</div></figure>
 <h3 id="iii1-loss-and-cross-entropy" class="">III.1 Loss and cross-entropy</h3>
 <p>The <strong>loss function</strong> turns "how wrong were we" into a single number. For LMs it's <strong>cross-entropy</strong>: for each position, look at the probability the model assigned to the <em>actual</em> next token, take -log of it. Assigned 100%? loss 0. Assigned 1%? loss 4.6. Average over all positions.</p>
@@ -426,23 +441,381 @@ figure.viz svg{width:100%;height:auto;display:block}
 <p><strong>The stack in one sentence:</strong> <em>NGC container → PyTorch → transformers loads the model → peft wraps it in LoRA → trl trains it → torchrun distributes it → modelopt quantizes it → vLLM serves it → litellm routes it.</em> Every stage of the curriculum lights up one or two more links of this chain.</p>
 <figure class="viz"><figcaption><span class="viz-title">The stack in one sentence</span><span class="viz-sub">Every curriculum stage lights up one or two more links of this chain</span></figcaption><div class="stack"><div class="st-link"><span class="st-name">NGC container</span><span class="st-role">the runtime</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">PyTorch</span><span class="st-role">tensors + autograd</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">transformers</span><span class="st-role">loads the model</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">peft</span><span class="st-role">wraps it in LoRA</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">trl</span><span class="st-role">trains it</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">torchrun</span><span class="st-role">distributes it</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">modelopt</span><span class="st-role">quantizes it</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">vLLM</span><span class="st-role">serves it</span></div><span class=st-arrow>→</span><div class="st-link"><span class="st-name">litellm</span><span class="st-role">routes it</span></div></div></figure>
 </section>
-<section class="part" id="part-xi-the-curriculum-what-well-actually-do"><div class="eyebrow">Part XI</div><h2>The curriculum (what we'll actually do)</h2>
-<p>Each stage: goal, what you'll learn, definition of done. Estate scheduling note: Stages 0–3 use <strong>one node</strong> (Kimi TP=4 must pause during training windows, we teardown/relaunch with the proven runbook); Stage 4+ uses all four.</p>
+<section class="part" id="part-xi-the-curriculum-hands-on-a-keyboard"><div class="eyebrow">Part XI</div><h2>The curriculum (hands on a keyboard)</h2>
+<p>Everything up to here was scaffolding. This is the part you actually <em>do</em>. Seven stages, each one a self-contained exercise you run on a real Spark and verify against a real result before moving on. Nothing here is "trust me", every command is copy-pasteable, every stage ends in a checkpoint you can see for yourself, and the numbers in the output blocks are the actual numbers this hardware produced (NGC PyTorch <code>25.12</code>, GB10, <code>sm_121</code>, driver <code>580.159.03</code>) when I ran the stage end-to-end to write this section. When the estate throws a <code>sm_121</code>-shaped wrench, and it does, in Stage 0, the fix is written down, not hand-waved.</p>
+<p><strong>The environment, once, for every stage.</strong> All training runs inside the NGC PyTorch container, which is the one runtime NVIDIA actually builds and tests for <code>aarch64</code> + Blackwell + CUDA 13. You do not <code>pip install torch</code> on the host; you pull the container and work inside it. The pattern that repeats in every stage:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab \
+  nvcr.io/nvidia/pytorch:25.12-py3 bash -c "&lt;the command for this stage&gt;"</code></pre></div>
+<p><code>--gpus all</code> hands the container the GB10, <code>--ipc=host</code> gives PyTorch's dataloader workers enough shared memory, and <code>-v ~/training-lab:/lab</code> mounts your working directory at <code>/lab</code> inside the container so scripts, models, and outputs survive the container exiting. <code>--rm</code> throws the container away afterward; your files under <code>~/training-lab</code> stay.</p>
+<p><strong>Estate scheduling.</strong> Stages 0–3 need one Spark and a few gigabytes; run them any time a node is idle. Stage 4 wants all four. If Kimi/DeepSeek/GLM are serving, one node's inference container has to pause for a training window, tear it down and relaunch with the proven vLLM runbook when you're done. Nothing in Stages 0–3 comes close to the 121 GiB of unified memory, so a training run and a paused-but-resident model can even coexist if you're careful.</p>
 <figure class="viz"><figcaption><span class="viz-title">The curriculum at a glance</span><span class="viz-sub">Stages 0–3 run on one node (Kimi pauses); Stage 4+ takes the estate</span></figcaption><div class="cs"><div class="cs-row"><div class="cs-bubble">0</div><div class="cs-body"><div class="cs-title">Stack validation <span class="cs-badges"><span class="cs-badge">~30 min</span><span class="cs-badge cs-nodes">1 node</span></span></div><div class="cs-done">done when: a torch matmul runs on the GPU and we know our QLoRA path</div></div></div><div class="cs-row"><div class="cs-bubble">1</div><div class="cs-body"><div class="cs-title">nanoGPT Shakespeare <span class="cs-badges"><span class="cs-badge">~45 min</span><span class="cs-badge cs-nodes">1 node</span></span></div><div class="cs-done">done when: you can narrate the training loop and diagnose a bad lr from the curve alone</div></div></div><div class="cs-row"><div class="cs-bubble">2</div><div class="cs-body"><div class="cs-title">First real finetune (LoRA-SFT) <span class="cs-badges"><span class="cs-badge">~1–2 hrs</span><span class="cs-badge cs-nodes">1 node</span></span></div><div class="cs-done">done when: the model demonstrably does the thing, and you caught overfitting on the eval curve</div></div></div><div class="cs-row"><div class="cs-bubble">3</div><div class="cs-body"><div class="cs-title">QLoRA an 8–14B <span class="cs-badges"><span class="cs-badge">~2–4 hrs</span><span class="cs-badge cs-nodes">1 node</span></span></div><div class="cs-done">done when: your memory prediction lands within ~15% of measured</div></div></div><div class="cs-row"><div class="cs-bubble">4</div><div class="cs-body"><div class="cs-title">Distributed: DDP → FSDP <span class="cs-badges"><span class="cs-badge">an evening</span><span class="cs-badge cs-nodes">2→4 nodes</span></span></div><div class="cs-done">done when: you can explain DDP vs FSDP vs TP in three sentences</div></div></div><div class="cs-row"><div class="cs-bubble">5</div><div class="cs-body"><div class="cs-title">Serve it (merge → NVFP4 → vLLM) <span class="cs-badges"><span class="cs-badge">~1 hr</span><span class="cs-badge cs-nodes">1 node</span></span></div><div class="cs-done">done when: your model answers through the same gateway as Kimi</div></div></div><div class="cs-row"><div class="cs-bubble">6</div><div class="cs-body"><div class="cs-title">Taste & distillation (DPO + teacher) <span class="cs-badges"><span class="cs-badge">ongoing</span><span class="cs-badge cs-nodes">estate</span></span></div><div class="cs-done">done when: a phone-sized model does your niche task, trained entirely on your LAN</div></div></div></div></figure>
-<h3 id="stage-0-stack-validation-30-min-mostly-me" class="stage">Stage 0, Stack validation (~30 min, mostly me)</h3>
-<p>Pull NGC PyTorch container on one node; verify <code>torch.cuda.is_available()</code>, bf16 matmul, SDPA; test-import peft/trl/datasets; probe bitsandbytes NF4 + flash-attn on sm_121 and record what works in a STACK.md. <em>Done when: a torch matmul runs on the GPU and we know our QLoRA path.</em></p>
-<h3 id="stage-1-nanogpt-shakespeare-45-min" class="stage">Stage 1, nanoGPT Shakespeare (~45 min)</h3>
-<p>Train a ~10M-param char-level GPT from scratch. Sample at iteration 0 (pure noise), 500 (word-shaped noise), 5000 (fake Shakespeare). Read the loss curve out loud together. Then break it on purpose: crank lr 100× and watch it explode, cheapest NaN lesson you'll ever get. <em>Done when: you can narrate every line of the training loop and diagnose a bad lr from the curve alone.</em></p>
-<h3 id="stage-2-first-real-finetune-12-hrs" class="stage">Stage 2, First real finetune (~1–2 hrs)</h3>
-<p>LoRA-SFT Qwen3-1.7B (or Llama-3.2-3B) with trl's SFTTrainer on ~1k ChatML examples, first a public set, then something of <em>yours</em>. Before/after vibes check on 10 fixed prompts. Deliberately overfit a 20-example run so you see eval-loss divergence with your own eyes. <em>Done when: the model demonstrably does the thing, and you caught overfitting on the eval curve.</em></p>
-<h3 id="stage-3-qlora-a-814b-24-hrs" class="stage">Stage 3, QLoRA a 8–14B (~2–4 hrs)</h3>
-<p>Same recipe, bigger model, 4-bit base. We do the Part V.1 memory arithmetic on paper <em>first</em>, predict peak usage, then verify against <code>nvidia-smi</code>. Flip gradient checkpointing and accumulation and measure their cost/savings. <em>Done when: your prediction lands within ~15% of measured, and you can explain where every GB went.</em></p>
-<h3 id="stage-4-distributed-evening" class="stage">Stage 4, Distributed (evening)</h3>
-<p>4.1: <code>torchrun --nnodes=2</code> DDP on the Stage 2 job; measure scaling; watch NCCL over the RoCE fabric. Scale to 4 nodes. 4.2: FSDP full-finetune of a 7–8B across all four, the run that's <em>impossible</em> on one node. <em>Done when: you can explain DDP vs FSDP vs vLLM's TP to someone else in three sentences.</em></p>
-<h3 id="stage-5-serve-it-1-hr" class="stage">Stage 5, Serve it (~1 hr)</h3>
-<p>Merge best adapter → NVFP4-quantize via modelopt → spark-vllm-docker recipe → <code>spark-custom</code> litellm alias → blind A/B vs base in open-webui; lm-eval sanity (did MMLU hold?). <em>Done when: your model answers through the same gateway as Kimi.</em></p>
-<h3 id="stage-6-taste-distillation-ongoing" class="stage">Stage 6, Taste &amp; distillation (ongoing)</h3>
-<p>DPO on preference pairs (yours, or Kimi-judged). Then the finale: Kimi generates a few thousand domain examples overnight (it has nothing better to do at 3am), filter, train a 3B student, evaluate against its teacher. <em>Done when: a model that fits on a phone does your niche task credibly, and every token that trained it was made on your LAN.</em></p>
+<h3 id="stage-0-validate-the-stack-20-min" class="stage">Stage 0, Validate the stack (~20 min)</h3>
+<p><strong>Why this stage exists.</strong> <code>sm_121</code> (GB10's compute capability) is new enough that a chunk of the ecosystem hasn't shipped precompiled kernels for it, and the NGC container tracks CUDA 13.1, newer than most libraries target. Before you burn an afternoon on a training run, you spend twenty minutes finding out <em>exactly</em> which pieces of the stack work, which need a workaround, and which are missing. The output of this stage is a <code>STACK.md</code> you can trust for every stage after it. Skip this and you'll discover the same facts at hour three of a run that was never going to finish.</p>
+<p><strong>What you'll do.</strong> Pull the container, then run one script that checks, in order: the GPU is visible to PyTorch, a bf16 matmul actually runs on it (and how fast), scaled-dot-product attention works, the four core libraries import, and the two historically-fragile pieces, bitsandbytes (4-bit quantization, needed for QLoRA in Stage 3) and FlashAttention, actually load.</p>
+<h4 class="substep">Step 1, Pull the runtime</h4>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker pull nvcr.io/nvidia/pytorch:25.12-py3</code></pre></div>
+<p>It's a large image (tens of GB); pull it once and it's cached. This single container carries a matched PyTorch / CUDA / cuDNN / NCCL set built for <code>aarch64</code> and Blackwell, the thing you would otherwise spend a day assembling by hand and still get subtly wrong.</p>
+<h4 class="substep">Step 2, Write the probe script</h4>
+<p>Save this as <code>~/training-lab/scripts/stage0.py</code>. Each check prints <code>PASS</code> or <code>FAIL</code> with the evidence, so the result is a scannable report, not a wall of tracebacks.</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>import time, subprocess, torch
+def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True).stdout.strip()
+print("== host =="); print(sh("nvidia-smi --query-gpu=name,driver_version --format=csv,noheader"))
+print(f"torch {torch.__version__}  cuda_build {torch.version.cuda}  is_available {torch.cuda.is_available()}")
+p = torch.cuda.get_device_properties(0)
+print(f"device: {p.name}  sm_{p.major}{p.minor}  {p.total_memory/2**30:.1f} GiB")
+
+# bf16 matmul + rough throughput
+a = torch.randn(8192, 8192, device="cuda", dtype=torch.bfloat16)
+b = torch.randn(8192, 8192, device="cuda", dtype=torch.bfloat16)
+for _ in range(3): a @ b
+torch.cuda.synchronize(); t0 = time.time(); N = 20
+for _ in range(N): c = a @ b
+torch.cuda.synchronize()
+dt = (time.time() - t0) / N
+print(f"bf16 matmul 8192^3: {dt*1e3:.1f} ms  = {2*8192**3/dt/1e12:.1f} TFLOPS  PASS")
+
+# attention
+q = torch.randn(4, 16, 2048, 64, device="cuda", dtype=torch.bfloat16)
+o = torch.nn.functional.scaled_dot_product_attention(q, q, q)
+print(f"SDPA out {tuple(o.shape)}  PASS")
+
+# the training libraries
+for m in ["transformers", "datasets", "peft", "trl", "accelerate"]:
+    try: print(f"import {m} {__import__(m).__version__}  PASS")
+    except Exception as e: print(f"import {m}  FAIL: {e}")
+
+# the two fragile ones
+try:
+    import bitsandbytes as bnb
+    from bitsandbytes.nn import Linear4bit
+    l = Linear4bit(512, 512, quant_type="nf4").cuda()
+    y = l(torch.randn(4, 512, device="cuda", dtype=torch.float16))
+    print(f"bitsandbytes {bnb.__version__} NF4  PASS")
+except Exception as e:
+    print(f"bitsandbytes NF4  FAIL: {str(e).splitlines()[0]}")
+try:
+    import flash_attn; print(f"flash_attn {flash_attn.__version__}  PASS")
+except Exception as e:
+    print(f"flash_attn  ABSENT -&gt; SDPA fallback")</code></pre></div>
+<h4 class="substep">Step 3, Run it in the container</h4>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab \
+  nvcr.io/nvidia/pytorch:25.12-py3 bash -c \
+  "pip install -q peft trl datasets bitsandbytes accelerate &amp;&amp; python /lab/scripts/stage0.py"</code></pre></div>
+<p>Here's the actual output from this hardware:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>== host ==
+NVIDIA GB10, 580.159.03
+torch 2.10.0a0+b4e4ee81d3.nv25.12  cuda_build 13.1  is_available True
+device: NVIDIA GB10  sm_121  121.7 GiB
+bf16 matmul 8192^3: 11.4 ms  = 96.4 TFLOPS  PASS
+SDPA out (4, 16, 2048, 64)  PASS
+import transformers 5.13.1  PASS
+import datasets 5.0.0  PASS
+import peft 0.19.1  PASS
+import trl 1.8.0  PASS
+import accelerate 1.14.0  PASS
+bitsandbytes NF4  FAIL: Configured CUDA binary not found at .../libbitsandbytes_cuda131.so
+flash_attn 2.7.4.post1  PASS</code></pre></div>
+<h4 class="substep">Step 4, Read the report</h4>
+<p>Line by line, this is what you just learned:</p>
+<ul><li><strong><code>sm_121 · 121.7 GiB</code></strong>, the unified-memory superpower from Part II is real and confirmed: 121.7 GiB visible to the GPU, versus the 24 GB on a consumer RTX card. This is the number that makes everything downstream possible.</li><li><strong><code>96.4 TFLOPS</code> bf16</strong>, a sanity number, not a benchmark. It confirms the GPU is doing real bf16 math at a plausible rate (recall from Part II that LLM work is usually bandwidth-bound, so you'll rarely see peak FLOPS, this is a floor that proves the compute path works).</li><li><strong>The five imports PASS</strong>, transformers 5.13, trl 1.8, peft 0.19, datasets 5.0, accelerate 1.14. These are the exact versions Stages 2–6 are written against; the APIs in those stages match these.</li><li><strong><code>flash_attn PASS</code></strong>, a pleasant surprise. The theory in Part X guessed FlashAttention might not have <code>sm_121</code> wheels; on <code>25.12</code> it does. You get the memory-efficient attention path for free.</li><li><strong><code>bitsandbytes NF4 FAIL</code></strong>, and here's the <code>sm_121</code>-shaped wrench. This one matters, because bitsandbytes is the 4-bit quantization engine QLoRA needs in Stage 3. Fix it now.</li></ul>
+<h4 class="substep">Step 5, Fix bitsandbytes (the one real failure)</h4>
+<p>Read the actual error: bitsandbytes went looking for <code>libbitsandbytes_cuda131.so</code> and didn't find it. It ships precompiled binaries for CUDA 11.8 through 13.0, but the container is CUDA <strong>13.1</strong>, one version past the newest binary bitsandbytes packages. It is not broken; it just has nothing built for this exact CUDA.</p>
+<p>The fix is one environment variable. <code>BNB_CUDA_VERSION=130</code> tells bitsandbytes to load its CUDA-13.0 binary instead, which runs fine under the 13.1 runtime (CUDA is forward-compatible across a minor version like this):</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -e BNB_CUDA_VERSION=130 -v ~/training-lab:/lab \
+  nvcr.io/nvidia/pytorch:25.12-py3 bash -c \
+  "pip install -q bitsandbytes &amp;&amp; python -c '
+import torch, bitsandbytes as bnb
+from bitsandbytes.nn import Linear4bit
+l = Linear4bit(512, 512, quant_type=\"nf4\").cuda()
+y = l(torch.randn(4, 512, device=\"cuda\", dtype=torch.bfloat16))
+print(f\"bnb {bnb.__version__} NF4  PASS with BNB_CUDA_VERSION=130\")'"</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>WARNING: BNB_CUDA_VERSION=130 environment variable detected; loading libbitsandbytes_cuda130.so.
+bnb 0.49.2 NF4  PASS with BNB_CUDA_VERSION=130</code></pre></div>
+<p>That's the whole fix. Every QLoRA command in Stage 3 carries <code>-e BNB_CUDA_VERSION=130</code>, and now you know why. (The purist alternative is to compile bitsandbytes from source against CUDA 13.1, or switch to <code>torchao</code>, PyTorch's native quantizer, both work, both are more effort than an environment variable you'll delete the day bitsandbytes ships a 13.1 binary.)</p>
+<aside class="callout why"><span class="co-icon">🎯</span><span class="co-body"><span class="co-label">Why it matters</span>This is the whole point of Stage 0. The bitsandbytes failure is not a disaster, it's a five-minute fix, but discovering it <em>before</em> Stage 3 instead of <em>during</em> it is the difference between a curriculum and a bad afternoon. Bleeding-edge hardware always has one or two of these; the discipline is to find them on purpose, up front, with a script that tells you exactly what's wrong.</span></aside>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint.</strong> You have the container pulled, a <code>stage0.py</code> that prints a clean PASS/FAIL report, <code>bitsandbytes</code> loading under <code>BNB_CUDA_VERSION=130</code>, and you can say in one sentence what each line of the report means. Write the working versions and the bnb workaround into a <code>STACK.md</code>, that file is your source of truth for every stage that follows.</span></aside>
+<h3 id="stage-1-train-a-gpt-from-scratch-15-min" class="stage">Stage 1, Train a GPT from scratch (~15 min)</h3>
+<p><strong>Why this stage exists.</strong> You cannot debug a training run you don't understand, and the fastest way to understand one is to watch a tiny model learn from pure noise in real time. nanoGPT is Karpathy's ~300-line implementation of exactly the four-beat loop from Part III, forward, loss, backward, step, with nothing hidden. In fifteen minutes you'll train a 10-million-parameter character-level GPT on the works of Shakespeare, watch it go from random gibberish to recognizable (if nonsensical) Elizabethan English, see an overfitting curve with your own eyes, and then deliberately break it with a bad learning rate. Every abstract warning in Part III becomes a number you generated.</p>
+<p><strong>What you'll do.</strong> Clone nanoGPT, prepare the data, run three training jobs of increasing length (sampling text after each so you can <em>see</em> the model improve), read the loss curve, and finally crank the learning rate 100× to watch a run fail.</p>
+<h4 class="substep">Step 1, Clone and prepare the data</h4>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>cd ~/training-lab &amp;&amp; git clone https://github.com/karpathy/nanoGPT.git
+docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab nvcr.io/nvidia/pytorch:25.12-py3 \
+  bash -c "cd /lab/nanoGPT &amp;&amp; pip install -q tiktoken &amp;&amp; python data/shakespeare_char/prepare.py"</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>train has 1,003,854 tokens
+val has 111,540 tokens</code></pre></div>
+<p><code>prepare.py</code> reads a 1 MB text file of Shakespeare, builds a character-level vocabulary (65 unique characters, every letter, digit, and punctuation mark that appears), and splits it into a training set (~1M tokens) and a validation set (~112k tokens) it holds back. That val split is the honesty mechanism from Part III.6: the model never trains on it, so its loss there is an unbiased read on whether the model is learning the <em>language</em> or just memorizing <em>these</em> lines.</p>
+<h4 class="substep">Step 2, A short run, and your first generated text</h4>
+<p>Train for 500 iterations, then sample:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab nvcr.io/nvidia/pytorch:25.12-py3 \
+  bash -c "cd /lab/nanoGPT &amp;&amp; \
+    python train.py config/train_shakespeare_char.py --max_iters=500 --eval_interval=250 \
+      --eval_iters=100 --compile=False --out_dir=/lab/out-s1-500 &amp;&amp; \
+    python sample.py --out_dir=/lab/out-s1-500 --num_samples=1 --max_new_tokens=200"</code></pre></div>
+<p>The training log, abridged:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>step 0:   train loss 4.2881, val loss 4.2821
+iter 10:  loss 3.1427, time 65.39ms, mfu 5.70%
+iter 100: loss 2.4574, time 66.15ms, mfu 5.65%
+iter 250: loss 2.0288   (step 250: val loss 2.0802)
+iter 500: loss 1.6204   (step 500: val loss 1.7240)
+number of parameters: 10.65M</code></pre></div>
+<p>And the text it generates at iteration 500:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>AUTOLYCUS:
+O swear that feath
+being abound and may them their and barth
+hath will be to cedtle oate away,
+And hence to my must offs, to the hearth!
+Wherefore earthee sent, will is the overs,</code></pre></div>
+<p>Read the numbers first. <strong>Step 0's loss is 4.29.</strong> That's not arbitrary: a model that has learned nothing assigns roughly equal probability to all 65 characters, and the cross-entropy of a uniform guess over 65 options is <code>ln(65) ≈ 4.17</code>. Starting at 4.29 confirms the model begins knowing <em>nothing</em>, exactly right. By iteration 500 the loss has more than halved to ~1.62. The <strong><code>mfu 5.7%</code></strong> is model FLOPs utilization, this tiny model uses only ~6% of the GB10's compute, because at 10M parameters it's far too small to saturate the hardware (which is fine; the point is the mechanics, not throughput).</p>
+<p>Now read the <em>text</em>. It's garbage, but it's <strong>structured</strong> garbage. The model has already learned that Shakespeare is written in lines, that a speaker name in capitals precedes a colon, that words are short clusters of letters separated by spaces, that apostrophes and commas exist. It has learned the <em>shape</em> of the language without any of the meaning. This is the "word-shaped noise" milestone.</p>
+<h4 class="substep">Step 3, The full run, and watching it overfit</h4>
+<p>Now train ten times as long, 5000 iterations, evaluating every 500 so you get a proper loss curve:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab nvcr.io/nvidia/pytorch:25.12-py3 \
+  bash -c "cd /lab/nanoGPT &amp;&amp; \
+    python train.py config/train_shakespeare_char.py --max_iters=5000 --eval_interval=500 \
+      --eval_iters=100 --compile=False --out_dir=/lab/out-s1-5000 &amp;&amp; \
+    python sample.py --out_dir=/lab/out-s1-5000 --num_samples=2 --max_new_tokens=300"</code></pre></div>
+<p>Here is the actual train-vs-val loss, every 500 steps:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>step 500:  train 1.5279   val 1.7123
+step 1000: train 1.2692   val 1.5122
+step 1500: train 1.1420   val 1.4809
+step 2000: train 1.0530   val 1.4757   &lt;- val loss minimum
+step 2500: train 0.9597   val 1.4907
+step 3000: train 0.8675   val 1.5314
+step 3500: train 0.7800   val 1.5626
+step 4000: train 0.7063   val 1.6194
+step 4500: train 0.6530   val 1.6704
+step 5000: train 0.6180   val 1.6866</code></pre></div>
+<p><strong>Stop and look at these two columns, because this is the single most important pattern in all of training.</strong> The <strong>train</strong> loss falls the entire way, 1.53 down to 0.62, smooth and monotonic. If that were the only number you watched, you'd think the run got better and better. But the <strong>val</strong> loss, the honest one, measured on text the model never trained on, bottoms out at <strong>1.4757 around step 2000</strong> and then <em>climbs</em> the rest of the way, back up to 1.69.</p>
+<p>That gap is <strong>overfitting</strong>, exactly as described in Part III.6, and here it is in your own numbers. Past step 2000 the model stops learning the general structure of Shakespearean English and starts <em>memorizing the specific training text</em>, which lowers train loss but makes it worse at everything else. The best model this run ever produced was the checkpoint at step ~2000, not the one at step 5000. If this were a real finetune, the move is <strong>early stopping</strong>: keep the step-2000 checkpoint, throw away the rest. (nanoGPT does this for you, <code>always_save_checkpoint=False</code> means it only saves when val loss improves, so the file on disk <em>is</em> the step-2000 best, not the overcooked end state.)</p>
+<p>The generated text at the end, though, is markedly better than the 500-iter run:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>KING RICHARD III:
+Then all the world which he is complixed.
+
+QUEEN ELIZABETH:
+And what were they may be the sea
+And then? What has a crutches are day?
+
+DUCHESS OF YORK:
+I am satisfied to change thee,
+On England marriage to thy king son,</code></pre></div>
+<p>Real character names (Richard III, Queen Elizabeth, the Duchess of York, all genuinely in the corpus), grammatical scaffolding, dialogue that <em>almost</em> parses. Still meaningless, but the difference between this and "O swear that feath" is the difference between 500 and 5000 iterations of the exact same loop.</p>
+<aside class="callout why"><span class="co-icon">🎯</span><span class="co-body"><span class="co-label">Why it matters</span>The lesson isn't "5000 is better than 500." It's the opposite: <strong>more training is not monotonically better.</strong> The val curve told you the model peaked at step 2000 and got <em>worse</em> for the next 3000 steps, even as the train loss, the number a naive person watches, kept dropping. Learning to trust the held-out number over the training number is most of what separates people who can finetune from people who overfit and don't notice.</span></aside>
+<h4 class="substep">Step 4, Break it on purpose</h4>
+<p>The cheapest lesson in the whole curriculum. Re-run with the learning rate cranked from its sane <code>~1e-3</code> up to <code>0.1</code>, 100× too high:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab nvcr.io/nvidia/pytorch:25.12-py3 \
+  bash -c "cd /lab/nanoGPT &amp;&amp; \
+    python train.py config/train_shakespeare_char.py --max_iters=400 --eval_interval=100 \
+      --eval_iters=50 --compile=False --learning_rate=0.1 --min_lr=0.01 --out_dir=/lab/out-s1-explode"</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>step 0:   train loss 4.2882   val loss 4.2813
+step 100: train loss 3.1096   val loss 3.1361
+step 200: train loss 3.4367   val loss 3.4626   &lt;- going the wrong way
+step 300: train loss 3.3908   val loss 3.4291
+step 400: train loss 6.4729   val loss 6.4900   &lt;- diverged</code></pre></div>
+<p>Compare this to the healthy run, where by step 500 the loss was already 1.53. Here, with too high a learning rate, the loss briefly dips to 3.11, then instead of continuing down it <em>bounces back up</em> to 3.44, wobbles, and finally blows up to 6.47, worse than the random starting point of 4.29. The optimizer is taking steps so large it overshoots the minimum every time, ricocheting around the loss landscape instead of settling into it. This is the "too high → loss spikes, oscillates, or explodes" failure from Part III.4, and now you've seen its exact signature: <strong>a loss that refuses to descend, then climbs.</strong> (Push the rate higher still, or drop gradient clipping, and instead of climbing it goes straight to <code>NaN</code>, a dead run.)</p>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint.</strong> You can point at step 0's loss of 4.29 and explain why it's <code>ln(vocab)</code>. You watched train loss and val loss diverge and can say which one to trust and where this run should have stopped (step ~2000). You made a run fail with a bad learning rate and can recognize the oscillate-then-climb signature. You can read every column of a nanoGPT log, iter, loss, time, mfu, out loud. That is the entire vocabulary of every training run in the rest of this guide, learned on a model small enough to see all of at once.</span></aside>
+<h3 id="stage-2-your-first-real-finetune-30-min" class="stage">Stage 2, Your first real finetune (~30 min)</h3>
+<p><strong>Why this stage exists.</strong> Stage 1 trained a toy from scratch; this is the thing you'll actually do ninety-five percent of the time, take a real, already-capable instruct model and teach it <em>your</em> task, tone, or format with LoRA. It's the workhorse of the whole guide. You'll finetune Qwen3-1.7B (small enough to iterate fast, real enough to be useful), see exactly how few parameters LoRA actually trains, watch the loss fall on a held-out set, and do a before/after comparison on fixed prompts so the change is something you can read rather than take on faith.</p>
+<p><strong>What you'll do.</strong> Load the model, generate from it <em>before</em> training (baseline), attach a LoRA adapter, train one epoch on ~1000 instruction-response examples with trl's <code>SFTTrainer</code>, then generate from the <em>same</em> prompts again and compare. The whole thing runs in well under the 121 GiB you have; you'll watch it use about a tenth of that.</p>
+<h4 class="substep">Step 1, Get the model and a dataset</h4>
+<p>Download the base model once to your working directory (it lives on disk, loads instantly thereafter), and let <code>datasets</code> fetch a small instruction set:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>~/hfenv/bin/hf download Qwen/Qwen3-1.7B --local-dir ~/training-lab/models/qwen3-1.7b</code></pre></div>
+<p>The training data is <code>HuggingFaceH4/no_robots</code>, 10k human-written instruction-response pairs in the modern <code>messages</code> format (<code>[{"role": "user", ...}, {"role": "assistant", ...}]</code>). We take the first 1000 for training and hold out 100 for eval. That <code>messages</code> format matters: <code>SFTTrainer</code> detects it and applies Qwen's chat template automatically, so you never hand-format a prompt string, and never hit the single most common beginner bug, training on the wrong template.</p>
+<h4 class="substep">Step 2, The finetune script</h4>
+<p>Save as <code>~/training-lab/scripts/stage2_sft.py</code>. The important lines are the <code>LoraConfig</code> and the <code>SFTConfig</code>; everything else is plumbing:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>import torch, json, time
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from datasets import load_dataset
+from peft import LoraConfig
+from trl import SFTTrainer, SFTConfig
+
+MODEL = "/lab/models/qwen3-1.7b"
+tok = AutoTokenizer.from_pretrained(MODEL)
+PROBES = ["Explain what a LoRA adapter is in two sentences.",
+          "Write a haiku about GPU memory.",
+          "What should I check first when my training loss goes to NaN?"]
+
+def generate(model, prompts, tag):
+    for p in prompts:
+        text = tok.apply_chat_template([{"role": "user", "content": p}],
+                 add_generation_prompt=True, tokenize=False, enable_thinking=False)
+        ids = tok(text, return_tensors="pt").input_ids.to(model.device)
+        o = model.generate(ids, max_new_tokens=120, do_sample=False)
+        print(f"[{tag}] {p}\n  -&gt; {tok.decode(o[0][ids.shape[1]:], skip_special_tokens=True)}\n")
+
+model = AutoModelForCausalLM.from_pretrained(MODEL, dtype=torch.bfloat16, device_map="cuda")
+print(f"loaded, cuda mem {torch.cuda.memory_allocated()/2**30:.2f} GiB")
+generate(model, PROBES, "BEFORE")
+
+ds      = load_dataset("HuggingFaceH4/no_robots", split="train[:1000]")
+eval_ds = load_dataset("HuggingFaceH4/no_robots", split="train[1000:1100]")
+peft_cfg = LoraConfig(r=16, lora_alpha=32, lora_dropout=0.05,
+                      target_modules="all-linear", task_type="CAUSAL_LM")
+cfg = SFTConfig(output_dir="/lab/out-s2-lora", per_device_train_batch_size=2,
+                gradient_accumulation_steps=8, num_train_epochs=1, learning_rate=2e-4,
+                lr_scheduler_type="cosine", warmup_steps=10, logging_steps=5,
+                eval_strategy="steps", eval_steps=20, bf16=True, max_length=1024, report_to=[])
+trainer = SFTTrainer(model=model, args=cfg, train_dataset=ds, eval_dataset=eval_ds, peft_config=peft_cfg)
+tp = sum(p.numel() for p in trainer.model.parameters() if p.requires_grad)
+ap = sum(p.numel() for p in trainer.model.parameters())
+print(f"trainable {tp/1e6:.1f}M of {ap/1e9:.2f}B = {100*tp/ap:.2f}%")
+t0 = time.time(); trainer.train()
+print(f"wall-clock {(time.time()-t0)/60:.1f} min, peak mem {torch.cuda.max_memory_allocated()/2**30:.2f} GiB")
+trainer.save_model("/lab/out-s2-lora/adapter")
+generate(trainer.model, PROBES, "AFTER")</code></pre></div>
+<p>Two config lines carry the whole idea. <code>LoraConfig(r=16, target_modules="all-linear")</code> is the entire Part V.2 theory made concrete: freeze the 1.7B base, attach rank-16 adapters to every linear layer, train only those. <code>SFTConfig</code> is the training recipe, batch 2 × accumulation 8 = effective batch 16, one epoch, LoRA-appropriate learning rate <code>2e-4</code>, cosine schedule with warmup, and an eval every 20 steps on the held-out 100 so you can watch for the overfitting you learned to spot in Stage 1.</p>
+<h4 class="substep">Step 3, Run it, and mind the container's version skew</h4>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -v ~/training-lab:/lab nvcr.io/nvidia/pytorch:25.12-py3 \
+  bash -c "pip install -q peft trl datasets accelerate &amp;&amp; \
+           pip uninstall -y -q torchao &amp;&amp; \
+           python /lab/scripts/stage2_sft.py"</code></pre></div>
+<p>That <code>pip uninstall -y torchao</code> is not optional, and it's the second <code>sm_121</code>-container wrinkle after the bitsandbytes one. The NGC <code>25.12</code> image ships <code>torchao 0.15.0</code>; the <code>peft</code> version you just installed refuses to inject LoRA layers unless torchao is either absent or newer than 0.16.0, and it <em>raises</em> rather than quietly skipping. Since we're doing plain bf16 LoRA (torchao is a quantization library we don't need here), the clean fix is to remove it so peft takes its normal code path. Discover this the way Stage 0 taught you: read the actual error (<code>ImportError: Found an incompatible version of torchao ... only versions above 0.16.0 are supported</code>) and fix exactly that.</p>
+<h4 class="substep">Step 4, Watch it train</h4>
+<p>The first thing the script prints once training starts is the number that justifies this whole approach:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>loaded, cuda mem 3.20 GiB
+trainable params: 17.4M of 1.74B (1.00%)</code></pre></div>
+<p><strong>You are training 17.4 million parameters out of 1.74 billion, one percent.</strong> The other 99% are frozen. That single line is the entire economic argument for LoRA from Part V.2, printed by your own run. Then the loss log (trl reports <code>loss</code>, <code>grad_norm</code>, <code>learning_rate</code>, and a couple of TRL-specific extras like <code>mean_token_accuracy</code> every 5 steps), with an eval on the held-out 100 every 20:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>step  5:  loss 3.775   grad_norm 4.66   lr 8e-05     mean_token_accuracy 0.470
+step 10:  loss 2.942   grad_norm 1.10   lr 1.8e-04   mean_token_accuracy 0.489
+step 15:  loss 2.364   grad_norm 0.81   lr 1.97e-04  mean_token_accuracy 0.511
+step 20:  eval_loss 2.292   epoch 0.32
+step 40:  eval_loss 2.231   epoch 0.64
+step 60:  eval_loss 2.223   epoch 0.96
+final:    eval_loss 2.223   epoch 1.00
+train wall-clock: 5.7 min, peak cuda mem 5.58 GiB</code></pre></div>
+<p>Read it like Stage 1 taught you. Train loss falls fast (3.78 → 2.36 in the first 15 steps) as the adapter learns the dataset's style. The <strong>eval</strong> loss, the honest one, falls 2.29 → 2.23 and then flattens, which is exactly what you want to see at one epoch: it's still improving or level, <em>not</em> rising, so you haven't overfit. If you'd run three epochs and watched eval_loss turn back up, Stage 1 taught you what to do (stop early). And the memory: peak <strong>5.58 GiB</strong> to finetune a 1.7B model, under 5% of the Spark's 121 GiB. The <code>warmup_steps=10</code> is visible in the learning rate climbing from <code>8e-05</code> toward the <code>2e-4</code> peak over the first steps, then the cosine schedule easing it back down.</p>
+<h4 class="substep">Step 5, The vibes check: did it actually change?</h4>
+<p>A loss number tells you training <em>worked mechanically</em>. It does not tell you the model got <em>better</em>, for that you read Part IX's cheapest real eval, the before/after vibes check. Here are the same three probe prompts, before and after one epoch on <code>no_robots</code>:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>BEFORE  "Write a haiku about GPU memory."
+  -&gt; GPU memory
+     Data flows swift,
+     Code runs with speed.
+
+AFTER   "Write a haiku about GPU memory."
+  -&gt; GPU memory
+     Memory is a big deal
+     GPU memory is a big deal</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>BEFORE  "Explain what a LoRA adapter is in two sentences."
+  -&gt; A LoRA (Low-Rank Adaptation) adapter is a technique used to fine-tune large
+     pre-trained models by adding a small, low-rank matrix to the model's weights,
+     allowing for efficient and effective model adaptation without requiring a full
+     retraining. It enables fine-tuning with minimal computational resources...
+
+AFTER   "Explain what a LoRA adapter is in two sentences."
+  -&gt; LoRA stands for Low-Rank Adaptation. LoRA is a method to fine-tune a
+     pre-trained model by adding a small matrix to the weights of the model.
+     This matrix is small in size and is used to fine-tune the model.</code></pre></div>
+<p>Now, be honest about what you're looking at, because this is the most useful lesson in the stage. The finetune did <strong>not</strong> make the model uniformly "smarter." It made it <strong>terser and plainer</strong>: shorter sentences, no markdown headers, the register of a plain human assistant. That's because <code>no_robots</code> is exactly that, concise, human-written responses, and a finetune moves the model toward <em>the distribution of its data</em>, full stop. On the LoRA explanation, that's arguably an improvement (tighter). On the haiku, it's clearly <em>worse</em> (repetitive, lost the form). Both come from the same cause: 1000 examples and one epoch is a gentle nudge toward a style, not a capability upgrade, and the haiku regression is the classic small-data artifact.</p>
+<aside class="callout why"><span class="co-icon">🎯</span><span class="co-body"><span class="co-label">Why it matters</span>This is why the vibes check is non-negotiable and why the loss number alone is a trap. Your <code>eval_loss</code> fell, training "worked", and yet the haiku got worse. Only looking at real outputs on prompts you care about tells you what the finetune actually <em>did</em>. The fix if you wanted better results isn't more steps; it's better data: examples that look like the outputs you actually want, including a few good haiku if haiku matter to you. Garbage-in-your-style, garbage-out-in-your-style.</span></aside>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint.</strong> You finetuned a real 1.7B model, saw with your own eyes that LoRA trained 1.00% of it in under six minutes and 5.6 GiB, read a healthy (non-overfitting) eval curve, and, most important, did a before/after vibes check and can articulate <em>what the finetune changed and why</em>, including where it made things worse. You can now finetune anything the base model can hold, which on this hardware is almost anything.</span></aside>
+<h3 id="stage-3-qlora-an-8b-and-predict-the-memory-first-25-min" class="stage">Stage 3, QLoRA an 8B, and predict the memory first (~25 min)</h3>
+<p><strong>Why this stage exists.</strong> Stage 2's 1.7B fit with room to spare. Now you scale to an 8B and add the one technique that makes big-model finetuning affordable: QLoRA, a LoRA adapter over a <em>4-bit quantized</em> base (Part V.3). But the real exercise here isn't running it, it's <strong>predicting the memory on paper first, then measuring</strong>, because the day you can look at a model size and a training recipe and say "that will need about N gigabytes" is the day you stop guessing and start engineering. If your prediction lands within ~15% of the measurement, you understand where the memory goes.</p>
+<p><strong>What you'll do.</strong> Do the Part V.1 arithmetic for an 8B in NF4, write down a number, then load the model 4-bit with bitsandbytes (the <code>BNB_CUDA_VERSION=130</code> fix from Stage 0 in hand), train a few LoRA steps with gradient checkpointing on, and compare measured peak memory against your prediction.</p>
+<h4 class="substep">Step 1, Predict, before you run anything</h4>
+<p>From Part V: a frozen 4-bit base costs about <strong>0.55 bytes per parameter</strong> (NF4's half-byte plus a small overhead for the block scales, double-quantization included). The LoRA adapters and their optimizer state apply only to the tiny fraction of trainable params, so they're a rounding error at load time. Activations depend on batch and sequence length and land on top during training. So:</p>
+<ul><li>8.2B params × 0.55 B/param ≈ <strong>4.5–5.0 GiB</strong> for the frozen base</li><li>LoRA adapters + AdamW state on ~0.5% of params ≈ a few hundred MB</li><li>activations at batch 1, seq 1024, <strong>with gradient checkpointing on</strong> ≈ 2–4 GiB</li></ul>
+<p>Prediction: base loads around <strong>4.5–5.5 GiB</strong>; training peaks somewhere in the low tens of GiB. Write that down now, the point is to commit before you look.</p>
+<h4 class="substep">Step 2, Load it in 4-bit and check the base against your prediction</h4>
+<p>The <code>BitsAndBytesConfig</code> is the Part V.3 recipe verbatim: NF4 quantization, bf16 compute, double quantization on.</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>import torch, time
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                         bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True)
+t0 = time.time()
+model = AutoModelForCausalLM.from_pretrained("/lab/models/qwen3-8b",
+            quantization_config=bnb, dtype=torch.bfloat16, device_map="cuda")
+print(f"NF4 load: {time.time()-t0:.0f}s, cuda mem {torch.cuda.memory_allocated()/2**30:.2f} GiB")</code></pre></div>
+<p>Run it inside the container <strong>with the bitsandbytes fix and torchao removed</strong> (both wrinkles from earlier stages, now second nature):</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --ipc=host -e BNB_CUDA_VERSION=130 -v ~/training-lab:/lab \
+  nvcr.io/nvidia/pytorch:25.12-py3 \
+  bash -c "pip install -q peft trl datasets accelerate bitsandbytes &amp;&amp; \
+           pip uninstall -y -q torchao &amp;&amp; python /lab/scripts/stage3_qlora.py"</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>PREDICTION: 8B in NF4 ~ 4.5-5.5 GiB base + adapters/optimizer ~0.5 + activations 2-4 GiB
+NF4 load: 108s, cuda mem 5.67 GiB</code></pre></div>
+<p><strong>Measured base: 5.67 GiB, against a prediction of 4.5–5.5.</strong> That's within about 3% of the top of your range, the small overshoot is the compute buffers bitsandbytes allocates alongside the quantized weights. You predicted the size of an 8-billion-parameter model in memory from first principles and were essentially right. That is the whole skill.</p>
+<h4 class="substep">Step 3, Train, and verify the training peak</h4>
+<p>Now train a few QLoRA steps with gradient checkpointing on (Part V.4, recompute activations instead of storing them, the single biggest memory lever after quantization), batch 1, accumulation 16:</p>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>trainable params (LoRA on NF4 base): ~20M
+25 steps: 5.8 min, peak cuda mem 9.88 GiB</code></pre></div>
+<p>Here's the full accounting against your Step 1 prediction. You predicted ~5 GiB base + a few hundred MB adapters + 2–4 GiB activations. Measured: <strong>5.67 GiB base, 9.88 GiB peak</strong>, the training overhead (adapters, their AdamW state, and checkpointed activations) added ~4.2 GiB on top of the base, landing the total squarely inside "base plus 2–4 GiB." <strong>Your paper prediction was right.</strong> An 8B QLoRA finetune costs under 10 GiB, which is why the same recipe scales to a 70B (≈38 GiB base in NF4) with room to spare on this hardware, exactly as Part V.3 claimed.</p>
+<aside class="callout why"><span class="co-icon">🎯</span><span class="co-body"><span class="co-label">Why it matters</span>The exercise was never "run QLoRA", trl makes that four lines. It was <em>predict the memory, then measure</em>, because that's the skill that lets you look at "70B QLoRA, batch 2, seq 4096" and know whether it fits before you wait 20 minutes to watch it OOM. You now have a calibrated model in your head: NF4 base ≈ 0.55 B/param, plus a few GiB of training overhead with checkpointing on.</span></aside>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint.</strong> Your memory prediction landed within ~15% of measured (5.67 vs a 4.5–5.5 estimate for the base; 9.88 peak inside the predicted range), and you can explain where every gigabyte went, base weights, adapter, optimizer state, activations. You also carried both <code>sm_121</code> container fixes (<code>BNB_CUDA_VERSION=130</code>, <code>torchao</code> removed) without thinking about them, which means Stage 0 did its job.</span></aside>
+<h3 id="stage-4-make-two-sparks-act-as-one-an-evening" class="stage">Stage 4, Make two Sparks act as one (an evening)</h3>
+<p><strong>Why this stage exists.</strong> Everything so far ran on a single Spark. This is where the estate stops being four separate machines and becomes one training cluster. You'll run the same kind of job across two nodes with <strong>DDP</strong> (Distributed Data Parallel), watch NCCL negotiate the RoCE fabric from Part II.5, and measure the actual speedup. The goal isn't a faster finetune today, it's understanding, in your hands, the difference between DDP (every node holds the whole model) and FSDP (the model is sharded across nodes), because that distinction is what decides whether a given model is trainable on the estate at all.</p>
+<p><strong>What you'll do.</strong> Run a small training job on one node to get a baseline throughput, then launch the identical job across two Sparks with <code>torchrun</code>, pointing NCCL at the fabric interface, and compare tokens/second. Then read what NCCL chose for its transport.</p>
+<h4 class="substep">Step 1, Know your fabric</h4>
+<p>From Part II.5: the Sparks are wired with 200 GbE ConnectX-7 NICs speaking RoCE. On these nodes that interface is <code>enp1s0f1np1</code>, on the <code>10.100.0.x</code> subnet (886a is <code>10.100.0.106</code>, d34e is <code>10.100.0.108</code>). NCCL, the library that moves gradients between nodes, has to be <em>told</em> to use that interface, or it will pick the wrong one (the classic multi-node hang is NCCL trying to talk over the Docker or WiFi interface). Two environment variables do it:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>-e NCCL_SOCKET_IFNAME=enp1s0f1np1   # use the fabric NIC, not docker0/wlan
+-e NCCL_DEBUG=INFO                   # print the transport NCCL selects</code></pre></div>
+<h4 class="substep">Step 2, The job: a self-contained DDP benchmark</h4>
+<p>You don't need a real dataset to feel DDP work; you need a model, synthetic batches, and a throughput number. This ~85M-parameter GPT, wrapped in <code>DistributedDataParallel</code>, is launched by <code>torchrun</code> (which sets <code>RANK</code>, <code>LOCAL_RANK</code>, and <code>WORLD_SIZE</code> for each process). The core is three lines, <code>init_process_group("nccl")</code>, <code>DDP(model)</code>, and a normal training step, because that is genuinely all DDP is: each rank runs the whole model on its own slice of the batch, and DDP all-reduces the gradients after every backward so all copies step identically.</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>import os, time, torch, torch.nn as nn, torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+dist.init_process_group("nccl")
+rank, world = dist.get_rank(), dist.get_world_size()
+torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+# ... build an 85M-param GPT ...
+model = DDP(GPT().cuda(), device_ids=[int(os.environ["LOCAL_RANK"])])
+# ... normal forward / cross_entropy / backward / opt.step() loop ...
+# time 30 steps, report global tokens/sec</code></pre></div>
+<h4 class="substep">Step 3, Baseline, then scale</h4>
+<p>First, one node, to get a throughput floor:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>docker run --rm --gpus all --network host --ipc=host -v ~/training-lab:/lab \
+  nvcr.io/nvidia/pytorch:25.12-py3 \
+  torchrun --standalone --nnodes=1 --nproc_per_node=1 /lab/scripts/ddp_demo.py</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>world_size=1  iface=None
+params=98M  batch=12x512  global_tokens_per_step=6144
+steps=30  324.1 ms/step  global 18k tok/s  per_node 18k tok/s</code></pre></div>
+<p>Now two nodes. Launch the <strong>master (node_rank 0) first</strong>, it hosts the rendezvous store the other node connects to, then the worker. Both point at the master's fabric address; note the static <code>--master_addr</code>/<code>--master_port</code> rendezvous, which is more reliable for a fixed two-node topology than the auto-electing <code>c10d</code> backend:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code># on 886a (master, fabric 10.100.0.106):
+docker run --rm --gpus all --network host --ipc=host \
+  -e NCCL_SOCKET_IFNAME=enp1s0f1np1 -e NCCL_DEBUG=INFO -v ~/training-lab:/lab \
+  nvcr.io/nvidia/pytorch:25.12-py3 \
+  torchrun --nnodes=2 --nproc_per_node=1 --node_rank=0 \
+    --master_addr=10.100.0.106 --master_port=29500 /lab/scripts/ddp_demo.py
+
+# on d34e (worker, node_rank=1), same command with --node_rank=1</code></pre></div>
+<div class="codewrap code-output"><span class="code-tag code-tag-out">what you should see</span><pre><code>world_size=2  iface=enp1s0f1np1
+params=98M  batch=12x512  global_tokens_per_step=12288
+steps=30  473.6 ms/step  global 25k tok/s  per_node 12k tok/s</code></pre></div>
+<h4 class="substep">Step 4, Read the scaling, honestly</h4>
+<p>Two nodes did <strong>not</strong> double your throughput, and understanding <em>why</em> is the entire point of the stage:</p>
+<ul><li><strong>Global throughput went 18k → 25k tok/s</strong>, a real 1.4× speedup. Two Sparks train faster than one. DDP works.</li><li><strong>But per-node throughput <em>dropped</em> 18k → 12k.</strong> Each node now spends part of every step in the gradient all-reduce, the <code>NCCL</code> exchange that averages gradients across both nodes after each backward (Part VII.1). That synchronization is time the solo run never paid, and it's why the step time rose from 324ms to 474ms.</li><li>That gap <strong>is</strong> the communication cost from Part II.5, made visible. And here it's larger than it needs to be: the <code>NCCL_DEBUG=INFO</code> log shows <code>NET/IB : No device found</code> followed by <code>Using ... OOB enp1s0f1np1</code>, meaning NCCL's RDMA/InfiniBand-verbs plugin didn't initialize in this container, so it fell back to plain <strong>TCP sockets over the fabric NIC</strong> rather than true RoCE RDMA. You're getting the 200GbE wire but not the zero-copy RDMA path, so the all-reduce is costlier than a fully-tuned setup would be. Getting the IB plugin loaded (the <code>libnccl-net</code> RDMA path) is exactly the kind of tuning that turns 1.4× into something closer to 1.8×, and now you know where to look, because you watched NCCL tell you which transport it picked.</li></ul>
+<aside class="callout why"><span class="co-icon">🎯</span><span class="co-body"><span class="co-label">Why it matters</span>This is the DDP lesson you can't get from a diagram: distributed training is a <em>tradeoff</em>, not free speed. Every step, the nodes stop and exchange gradients; whether that's worth it depends on how the compute-per-step compares to the communication-per-step. For a tiny 98M model with big gradients relative to its compute, the tax is steep (1.4×). For a real finetune where each node does far more compute per step, the same fixed communication is a smaller fraction and scaling gets closer to linear. You now have the tools to <em>measure</em> that ratio instead of guessing it.</span></aside>
+<p><strong>DDP vs FSDP, in one breath (Part VII.2).</strong> DDP put a <em>whole copy</em> of the model on each node, fine here, because 98M fits anywhere. When the model <em>doesn't</em> fit on one node, you switch to <strong>FSDP</strong>, which shards the parameters, gradients, and optimizer states across nodes so each holds only 1/N, trading more fabric traffic (weights move every step, not just gradients) for the ability to train a model too big for any single Spark. The launch is nearly identical (<code>accelerate launch</code> with an FSDP config instead of bare <code>torchrun</code>); the mental model is the only thing that changes: DDP replicates and syncs gradients, FSDP shards and gathers weights just-in-time. On a 25 GB/s fabric FSDP will be leisurely, but it's the difference between "can't train this at all" and "trains overnight."</p>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint.</strong> You ran the same job on one node and two, measured a real 1.4× speedup, and can explain the sub-linear scaling in one sentence (per-step gradient all-reduce over the fabric). You saw NCCL pick its transport and know it fell back to TCP-over-fabric rather than RDMA, and where you'd tune that. And you can state the DDP-vs-FSDP distinction, replicate-and-sync vs shard-and-gather, to someone else in three sentences. That was the goal.</span></aside>
+<h3 id="stage-5-serve-your-model-through-the-gateway-1-hr" class="stage">Stage 5, Serve your model through the gateway (~1 hr)</h3>
+<p><strong>Why this stage exists.</strong> A finetune sitting in a checkpoint directory is worthless; a finetune answering on the same <code>litellm</code> gateway as Kimi is a tool you'll actually use. This stage closes the loop from Part VI and Part X: take the LoRA adapter from Stage 2, fold it into the base, quantize the result for fast serving, stand it up on vLLM, and register it as a <code>litellm</code> alias so it's reachable exactly like every other model on the estate. "Train high-precision, serve low-precision" (Part VI) stops being a slogan and becomes a pipeline you ran.</p>
+<p><strong>What you'll do.</strong> Merge the adapter, spin up vLLM two different ways (the quick adapter-hotswap way and the merged-model way), then wire a <code>spark-custom</code> alias into <code>litellm</code> and call it.</p>
+<h4 class="substep">Step 1, Merge the adapter into the base</h4>
+<p>The Stage 2 adapter is just the small A/B matrices. <code>merge_and_unload()</code> folds them back into a standalone model. The one rule that matters: <strong>merge into a fresh bf16 load of the base, never the 4-bit training checkpoint</strong>, merging into quantized weights bakes the quantization error in permanently.</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>from peft import PeftModel
+from transformers import AutoModelForCausalLM
+import torch
+base = AutoModelForCausalLM.from_pretrained("/lab/models/qwen3-1.7b", dtype=torch.bfloat16)  # NOT 4-bit
+merged = PeftModel.from_pretrained(base, "/lab/out-s2-lora/adapter").merge_and_unload()
+merged.save_pretrained("/lab/out-s2-merged")</code></pre></div>
+<h4 class="substep">Step 2, Two ways to serve it</h4>
+<p><strong>The fast way, don't merge at all, hot-swap the adapter on vLLM.</strong> vLLM can serve one base model with N LoRA adapters attached, selecting between them per request. No merge, no quantize step:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>vllm serve /lab/models/qwen3-1.7b --enable-lora \
+  --lora-modules mine=/lab/out-s2-lora/adapter --max-lora-rank 16</code></pre></div>
+<p>Clients pick the adapter by passing its name (<code>mine</code>) as the model field. This is the right choice when you're iterating on several adapters over one base, they share weights in memory and you swap between them for the cost of the tiny A/B matrices.</p>
+<p><strong>The production way, serve the merged model.</strong> For a single model you'll keep, serve the merged checkpoint (optionally quantized to NVFP4 via TensorRT Model Optimizer, per Part VI's serve pipeline, using the same <code>spark-vllm-docker</code> recipe the estate already runs for Kimi and GLM). One model, lowest per-token overhead, simplest quantization story.</p>
+<h4 class="substep">Step 3, Register it on litellm</h4>
+<p>The estate's <code>litellm</code> gateway (<code>litellm.local-ai.svc:4000</code>, aliases like <code>spark-kimi-k2.6</code>, <code>spark-glm-5.2</code>, <code>vision</code>) is the one route every consumer uses. Add your model to the homelab litellm config as a new alias, <code>spark-custom</code>, pointing at the vLLM endpoint you just started, and it becomes reachable through the same API as everything else:</p>
+<div class="codewrap code-console"><span class="code-tag">run this</span><pre><code>curl http://litellm.local-ai.svc:4000/v1/chat/completions \
+  -H "Authorization: Bearer $LITELLM_KEY" -H "Content-Type: application/json" \
+  -d '{"model": "spark-custom", "messages": [{"role": "user", "content": "..."}]}'</code></pre></div>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint.</strong> Your finetune answers a <code>curl</code> to the <code>spark-custom</code> alias on the same gateway as Kimi. You can A/B it against the base model blind (point <code>open-webui</code> at both aliases) and, if you want the number, run <code>lm-eval-harness</code> on a benchmark like MMLU against base and finetune to confirm the finetune didn't wreck general ability (the catastrophic-forgetting check from Part IX).</span></aside>
+<h3 id="stage-6-taste-and-the-estates-killer-app-ongoing" class="stage">Stage 6, Taste, and the estate's killer app (ongoing)</h3>
+<p><strong>Why this stage exists.</strong> Stages 2–5 taught the model to <em>do a task</em>. This stage is about teaching it <em>judgment</em>, which of two answers is better, and then the payoff the whole estate was built for: using your 519B Kimi as a free, private teacher to generate training data for a small student model that runs anywhere. This is where "I have four Sparks on my desk" turns into "I trained a model on my niche that fits on a phone, and every token that trained it was made on my LAN."</p>
+<p><strong>What you'll do.</strong> Two projects, both open-ended. First, preference-tune with DPO. Then, the capstone: distill Kimi into a 3B.</p>
+<h4 class="substep">Project A, DPO (preference tuning)</h4>
+<p>SFT (Stage 2) teaches "here is a good answer." DPO (Direct Preference Optimization, Part IV.3) teaches "<em>this</em> answer is better than <em>that</em> one", tone, safety, style, the things a single gold answer can't capture. It runs almost exactly like SFT, but the data is triples, <code>{"prompt", "chosen", "rejected"}</code>, and the trainer is <code>DPOTrainer</code> instead of <code>SFTTrainer</code>. The cheapest way to get preference pairs without hiring labelers: <strong>have Kimi judge them.</strong> Generate two answers from your Stage 2 model, ask <code>spark-kimi-k2.6</code> which is better, and that vote becomes one training triple. Your local teacher is a free preference labeler (the RLAIF idea from Part IV.3).</p>
+<h4 class="substep">Project B, Distillation (the capstone)</h4>
+<p>The loop from Part VIII.3, now with your own hardware as the data factory:</p>
+<ol><li><strong>Seed</strong> a few hundred instructions in your domain.</li><li><strong>Generate</strong>, point a script at <code>spark-kimi-k2.6</code> and have the 519B teacher write a few thousand high-quality instruction-response pairs overnight (it has nothing better to do at 3am, and the marginal cost is zero because it's your LAN, not an API bill).</li><li><strong>Filter</strong>, dedup, length-check, and optionally have Kimi score its own outputs, keeping only the good ones.</li><li><strong>Train</strong>, a LoRA-SFT (Stage 2's exact recipe) of a 3B student on that synthetic set.</li><li><strong>Evaluate</strong>, the student against its teacher on your private eval prompts (Part IX), which no benchmark contamination can pollute.</li></ol>
+<aside class="callout check"><span class="co-icon">✅</span><span class="co-body"><span class="co-label">Checkpoint</span><strong>Checkpoint / the finish line.</strong> A 3B model that fits on a handheld does your niche task credibly, trained entirely on data your own 519B model generated, served through your own gateway, evaluated on your own held-out prompts. No frontier API touched the loop at any point. That is the whole estate, end to end, and you built every link of the chain from Part X yourself, one stage at a time.</span></aside>
+<p class="closing">Say "go stage 0" whenever you're ready.</p>
 </section>
 <section class="part" id="part-xii-glossary-fridge-door-edition"><div class="eyebrow">Part XII</div><h2>Glossary (fridge-door edition)</h2>
 <div class="glossary"><div class="gl-item"><span class="gl-term">Activation</span><span class="gl-def">intermediate outputs of the forward pass; the memory backprop must keep.</span></div><div class="gl-item"><span class="gl-term">Adapter</span><span class="gl-def">the small trained LoRA file.</span></div><div class="gl-item"><span class="gl-term">AdamW</span><span class="gl-def">default optimizer; costs 8 bytes/param in states.</span></div><div class="gl-item"><span class="gl-term">All-reduce</span><span class="gl-def">NCCL op that averages tensors across nodes.</span></div><div class="gl-item"><span class="gl-term">Autograd</span><span class="gl-def">PyTorch's automatic gradient machinery.</span></div><div class="gl-item"><span class="gl-term">Backprop</span><span class="gl-def">algorithm computing all gradients via the chain rule.</span></div><div class="gl-item"><span class="gl-term">Base model</span><span class="gl-def">pretrained, not instruction-tuned.</span></div><div class="gl-item"><span class="gl-term">Batch</span><span class="gl-def">examples per step.</span></div><div class="gl-item"><span class="gl-term">BF16</span><span class="gl-def">2-byte training float.</span></div><div class="gl-item"><span class="gl-term">BPE</span><span class="gl-def">tokenizer construction algorithm.</span></div><div class="gl-item"><span class="gl-term">Catastrophic forgetting</span><span class="gl-def">finetune wrecking general ability.</span></div><div class="gl-item"><span class="gl-term">Checkpoint</span><span class="gl-def">saved weights mid-run.</span></div><div class="gl-item"><span class="gl-term">ChatML</span><span class="gl-def">messages-style data format.</span></div><div class="gl-item"><span class="gl-term">Chat template</span><span class="gl-def">serialization of a conversation into tokens; wrong one = ruined finetune.</span></div><div class="gl-item"><span class="gl-term">Context window</span><span class="gl-def">max tokens the model attends over.</span></div><div class="gl-item"><span class="gl-term">Cross-entropy</span><span class="gl-def">the LM loss function.</span></div><div class="gl-item"><span class="gl-term">CUDA</span><span class="gl-def">NVIDIA GPU compute platform.</span></div><div class="gl-item"><span class="gl-term">DDP</span><span class="gl-def">data parallelism, full copy per node.</span></div><div class="gl-item"><span class="gl-term">DPO</span><span class="gl-def">preference tuning without RL.</span></div><div class="gl-item"><span class="gl-term">Distillation</span><span class="gl-def">big teacher trains small student.</span></div><div class="gl-item"><span class="gl-term">Epoch</span><span class="gl-def">one pass over the dataset.</span></div><div class="gl-item"><span class="gl-term">Eval set</span><span class="gl-def">held-out data for honest measurement.</span></div><div class="gl-item"><span class="gl-term">FFN/MLP</span><span class="gl-def">the dense half of a transformer block.</span></div><div class="gl-item"><span class="gl-term">FLOPs</span><span class="gl-def">raw compute rate.</span></div><div class="gl-item"><span class="gl-term">FSDP</span><span class="gl-def">sharded data parallelism (≈ ZeRO-3).</span></div><div class="gl-item"><span class="gl-term">GGUF</span><span class="gl-def">llama.cpp model file format.</span></div><div class="gl-item"><span class="gl-term">Gradient</span><span class="gl-def">per-parameter slope of the loss.</span></div><div class="gl-item"><span class="gl-term">Gradient accumulation</span><span class="gl-def">simulate big batches.</span></div><div class="gl-item"><span class="gl-term">Gradient checkpointing</span><span class="gl-def">recompute activations to save memory.</span></div><div class="gl-item"><span class="gl-term">Gradient clipping</span><span class="gl-def">cap gradient norm; NaN insurance.</span></div><div class="gl-item"><span class="gl-term">GRPO</span><span class="gl-def">RL variant for reasoning training.</span></div><div class="gl-item"><span class="gl-term">KV cache</span><span class="gl-def">attention state cached during generation.</span></div><div class="gl-item"><span class="gl-term">Learning rate</span><span class="gl-def">step size; the knob.</span></div><div class="gl-item"><span class="gl-term">LoRA</span><span class="gl-def">low-rank adapters; finetune &lt;1% of params.</span></div><div class="gl-item"><span class="gl-term">Loss</span><span class="gl-def">scalar wrongness; the thing that must go down.</span></div><div class="gl-item"><span class="gl-term">MoE</span><span class="gl-def">mixture-of-experts; big total, small active.</span></div><div class="gl-item"><span class="gl-term">NCCL</span><span class="gl-def">GPU communication library.</span></div><div class="gl-item"><span class="gl-term">NF4</span><span class="gl-def">4-bit format for QLoRA bases.</span></div><div class="gl-item"><span class="gl-term">NVFP4</span><span class="gl-def">NVIDIA's 4-bit serving format.</span></div><div class="gl-item"><span class="gl-term">Overfitting</span><span class="gl-def">memorizing train data; eval loss rises.</span></div><div class="gl-item"><span class="gl-term">Perplexity</span><span class="gl-def">e^loss.</span></div><div class="gl-item"><span class="gl-term">PEFT</span><span class="gl-def">parameter-efficient finetuning umbrella.</span></div><div class="gl-item"><span class="gl-term">PPO</span><span class="gl-def">the RL algorithm inside classic RLHF.</span></div><div class="gl-item"><span class="gl-term">Pretraining</span><span class="gl-def">from-scratch training on internet-scale text.</span></div><div class="gl-item"><span class="gl-term">QLoRA</span><span class="gl-def">LoRA over a 4-bit frozen base.</span></div><div class="gl-item"><span class="gl-term">Quantization</span><span class="gl-def">lower-precision storage.</span></div><div class="gl-item"><span class="gl-term">Rank (r)</span><span class="gl-def">LoRA adapter width.</span></div><div class="gl-item"><span class="gl-term">RDMA/RoCE</span><span class="gl-def">direct remote-memory networking; your 200Gb fabric.</span></div><div class="gl-item"><span class="gl-term">RLHF</span><span class="gl-def">RL from human feedback.</span></div><div class="gl-item"><span class="gl-term">SDPA</span><span class="gl-def">PyTorch's built-in fast attention.</span></div><div class="gl-item"><span class="gl-term">SFT</span><span class="gl-def">supervised finetuning on prompt→response pairs.</span></div><div class="gl-item"><span class="gl-term">sm_121</span><span class="gl-def">GB10's CUDA compute capability; the reason we validate kernels.</span></div><div class="gl-item"><span class="gl-term">TP/PP/EP</span><span class="gl-def">tensor/pipeline/expert parallelism (serving-side mostly, for us).</span></div><div class="gl-item"><span class="gl-term">Token</span><span class="gl-def">the unit of text models read.</span></div><div class="gl-item"><span class="gl-term">torchrun</span><span class="gl-def">PyTorch's multi-node launcher.</span></div><div class="gl-item"><span class="gl-term">Warmup</span><span class="gl-def">lr ramp at run start.</span></div><div class="gl-item"><span class="gl-term">ZeRO</span><span class="gl-def">DeepSpeed's sharding scheme family.</span></div></div>
