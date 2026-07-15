@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Turning Honeypot Noise into PentAGI Investigations | blog.crawley.systems</title>
   <meta name="description" content="How an FTP honeypot daemon feeds attacker IPs into PentAGI, with bounded flow creation and a local Qwen3-Coder model running on an RTX 5090 through vLLM.">
-  <link rel="preload" href="../fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="../styles.css?v=20260714-deslop">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
   <style>
     .honeypot-hero {
       position: relative;
@@ -18,8 +20,8 @@
       overflow: hidden;
       border-bottom: 1px solid var(--border);
       background:
-        linear-gradient(90deg, rgba(20, 17, 16, 0.94) 0%, rgba(20, 17, 16, 0.74) 34%, rgba(20, 17, 16, 0.16) 72%),
-        linear-gradient(0deg, rgba(20, 17, 16, 0.78) 0%, rgba(20, 17, 16, 0.06) 45%),
+        linear-gradient(90deg, rgba(10, 10, 11, 0.94) 0%, rgba(10, 10, 11, 0.74) 34%, rgba(10, 10, 11, 0.16) 72%),
+        linear-gradient(0deg, rgba(10, 10, 11, 0.78) 0%, rgba(10, 10, 11, 0.06) 45%),
         url("../pentagi-honeypot-hero.png") center / cover no-repeat;
     }
 
@@ -62,7 +64,7 @@
       .honeypot-hero {
         min-height: 680px;
         background:
-          linear-gradient(180deg, rgba(20, 17, 16, 0.94) 0%, rgba(20, 17, 16, 0.74) 58%, rgba(20, 17, 16, 0.22) 100%),
+          linear-gradient(180deg, rgba(10, 10, 11, 0.94) 0%, rgba(10, 10, 11, 0.74) 58%, rgba(10, 10, 11, 0.22) 100%),
           url("../pentagi-honeypot-hero.png") center / cover no-repeat;
       }
     }
@@ -405,6 +407,7 @@ LLM_SERVER_CONFIG_PATH: "/etc/pentagi/llm-config.yml"</code></pre>
       <hr>
 
       <div class="article-author">
+        <div class="article-author__avatar">KC</div>
         <div class="article-author__info">
           <h4>Kevin Crawley</h4>
           <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>

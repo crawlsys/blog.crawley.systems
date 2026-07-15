@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stop Burning Frontier Tokens on Routine Inference | blog.crawley.systems</title>
   <meta name="description" content="How I taught Claude to send routine image and video work to a homelab GPU using two small CLIs and a couple of Claude skills, instead of paying frontier-token prices to read a screenshot.">
-  <link rel="preload" href="../fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="../styles.css?v=20260714-deslop">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
   <style>
     .article-diagram {
       margin: 40px 0;
@@ -27,39 +29,39 @@
       line-height: 1.6;
     }
     .article-diagram .dg-text {
-      font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
-      fill: #f0e9df;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      fill: #fafafa;
     }
     .article-diagram .dg-muted {
-      fill: #b0a494;
+      fill: #a1a1aa;
     }
     .article-diagram .dg-dim {
-      fill: #8d8272;
+      fill: #71717a;
     }
     .article-diagram .dg-box {
-      fill: #221c17;
-      stroke: #2e2721;
+      fill: #18181b;
+      stroke: #27272a;
       stroke-width: 1;
     }
     .article-diagram .dg-box-accent {
-      fill: #221c17;
-      stroke: #c99756;
+      fill: #18181b;
+      stroke: #f59e0b;
       stroke-width: 1.25;
     }
     .article-diagram .dg-box-cool {
-      fill: #221c17;
-      stroke: #7da3c9;
+      fill: #18181b;
+      stroke: #60a5fa;
       stroke-width: 1.25;
     }
     .article-diagram .dg-line {
-      stroke: #3a322b;
+      stroke: #3f3f46;
       stroke-width: 1.25;
       fill: none;
     }
-    .article-diagram .dg-line-accent { stroke: #c99756; }
-    .article-diagram .dg-line-cool { stroke: #7da3c9; }
-    .article-diagram .dg-amber { fill: #c99756; }
-    .article-diagram .dg-blue { fill: #7da3c9; }
+    .article-diagram .dg-line-accent { stroke: #f59e0b; }
+    .article-diagram .dg-line-cool { stroke: #60a5fa; }
+    .article-diagram .dg-amber { fill: #f59e0b; }
+    .article-diagram .dg-blue { fill: #60a5fa; }
     .hero-split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -454,6 +456,7 @@ claude: [runs thor-vid on each URL]
       <hr>
 
       <div class="article-author">
+        <div class="article-author__avatar">KC</div>
         <div class="article-author__info">
           <h4>Kevin Crawley</h4>
           <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>

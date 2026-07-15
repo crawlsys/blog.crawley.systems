@@ -14,18 +14,16 @@
 <meta name="twitter:title" content="Custom Training on DGX Spark: Field Guide">
 <meta name="twitter:image" content="https://blog.crawley.systems/special/dgx-spark-training-banner-v3.jpg">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
-<link rel="preload" href="../fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-@font-face{font-family:'Gambarino';src:url('../fonts/gambarino-regular.woff2') format('woff2'),url('../fonts/gambarino-regular.woff') format('woff');font-weight:400;font-style:normal;font-display:swap}
 :root{
   /* blog.crawley.systems tokens, dark is the house style and the default */
-  --page:#141110; --surface:#181411; --ink:#f0e9df; --ink2:#b0a494; --muted:#8d8272;
-  --grid:#241f1a; --axis:#2e2721; --ring:rgba(240,233,223,.08);
-  --accent:#c99756; --accent-dim:#8a6635; --accent-glow:rgba(201,151,86,.15);
-  --s1:#b3823f; --s2:#6f94b8; --s3:#5fa39a; --s4:#c97a6e; --s5:#a58ab8; --s6:#6f9f6a;
-  --sq2:#e0b478; --sq4:#c99756; --sq5:#b3823f; --sq6:#8a6635; --sq7:#6e5227;
-  --good:#79a884; --warn:#c99756; --crit:#c97a6e;
-  --code-bg:#221c17; --hb-lab:170px; --hb-valw:150px;
+  --page:#0a0a0b; --surface:#141416; --ink:#fafafa; --ink2:#a1a1aa; --muted:#71717a;
+  --grid:#1e1e21; --axis:#27272a; --ring:rgba(250,250,250,.08);
+  --accent:#f59e0b; --accent-dim:#b45309; --accent-glow:rgba(245,158,11,.15);
+  --s1:#d97706; --s2:#3b82f6; --s3:#0d9488; --s4:#ef4444; --s5:#8b5cf6; --s6:#16a34a;
+  --sq2:#fbbf24; --sq4:#f59e0b; --sq5:#d97706; --sq6:#b45309; --sq7:#92400e;
+  --good:#22c55e; --warn:#f59e0b; --crit:#ef4444;
+  --code-bg:#18181b; --hb-lab:170px; --hb-valw:150px;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
@@ -55,7 +53,10 @@ nav.toc a:hover{color:var(--ink)}
 @media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}nav.toc{display:none}}
 
 /* ---- hero ---- */
-header.hero{border-bottom:1px solid var(--grid)}
+header.hero{border-bottom:1px solid var(--grid);
+  background:
+    radial-gradient(ellipse 90% 130% at 70% -30%, var(--accent-glow), transparent),
+    repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in oklab, var(--grid) 55%, transparent) 79px 80px)}
 .hero-in{max-width:1120px;margin:0 auto;padding:56px 24px 40px;position:relative;
   display:grid;grid-template-columns:minmax(0,1fr) clamp(360px,42%,520px);gap:40px;align-items:center}
 .hero-img{width:100%;align-self:center;mix-blend-mode:lighten;
@@ -63,9 +64,9 @@ header.hero{border-bottom:1px solid var(--grid)}
   mask-image:radial-gradient(ellipse 72% 82% at 50% 50%, #000 50%, transparent 92%)}
 .hero-note{max-width:62ch;color:var(--muted);font-size:.88em;margin-top:10px}
 @media(max-width:900px){.hero-in{grid-template-columns:minmax(0,1fr)}.hero-img{max-width:380px;max-height:480px;order:-1;justify-self:center}}
-.hero-kicker{font-size:.88em;color:var(--accent);font-weight:600}
-h1{font-family:'Gambarino',Georgia,serif;font-size:clamp(1.8em,4.2vw,2.9em);line-height:1.12;
-  margin:.35em 0 .5em;max-width:22ch;font-weight:400}
+.hero-kicker{display:flex;align-items:center;gap:8px;font-size:.78em;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700}.hero-kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 2.4s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(1.7em,4vw,2.6em);line-height:1.15;margin:.35em 0 .5em;max-width:20ch;
+  font-weight:750;letter-spacing:-.015em}
 .hero-sub{max-width:62ch;color:var(--ink2);font-size:1.02em}
 .hero-how{max-width:62ch;margin-top:20px;padding:14px 18px;background:var(--surface);
   border:1px solid var(--ring);border-radius:12px;font-size:.9em;color:var(--ink2)}
@@ -75,11 +76,12 @@ h1{font-family:'Gambarino',Georgia,serif;font-size:clamp(1.8em,4.2vw,2.9em);line
 
 /* ---- content ---- */
 section.part{padding-top:56px}
-.eyebrow{font-size:.75em;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
-  font-weight:600;margin-bottom:2px}
-h2{font-family:'Gambarino',Georgia,serif;font-size:1.85em;margin:.1em 0 .6em;line-height:1.2;font-weight:400}
+.eyebrow{font-size:.75em;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);
+  font-weight:700;margin-bottom:2px}
+h2{font-size:1.65em;margin:.1em 0 .6em;letter-spacing:-.01em;line-height:1.2;font-weight:720}
 h3{font-size:1.12em;margin:2.2em 0 .5em;font-weight:680}
-h3.stage{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:10px 16px}
+h3.stage{background:var(--surface);border:1px solid var(--ring);border-left:3px solid var(--accent);
+  border-radius:0 10px 10px 0;padding:10px 16px}
 p{margin:.85em 0}
 ul,ol{padding-left:1.4em;margin:.85em 0}
 li{margin:.45em 0}
@@ -92,10 +94,11 @@ li::marker{color:var(--muted)}
 .callout .co-icon{flex:0 0 auto;font-size:1.15em;line-height:1.4}
 .callout .co-label{display:block;font-size:.72em;letter-spacing:.14em;text-transform:uppercase;
   color:var(--muted);font-weight:700;margin-bottom:2px}
-.callout.res .co-label,.callout.link .co-label{color:var(--accent-dim)}
-.callout.check .co-label{color:var(--good)}
-.callout.warn .co-label{color:var(--warn)}
-.callout.why .co-label{color:var(--accent)}
+.callout.res{border-left:3px solid var(--accent-dim)}
+.callout.link{border-left:3px solid var(--accent-dim)}
+.callout.check{border-left:3px solid var(--good);background:color-mix(in oklab,var(--good) 7%,var(--surface))}
+.callout.warn{border-left:3px solid var(--warn);background:color-mix(in oklab,var(--warn) 7%,var(--surface))}
+.callout.why{border-left:3px solid var(--accent);background:color-mix(in oklab,var(--accent) 6%,var(--surface))}
 
 /* substep headings + code blocks with run/output labels */
 h4.substep{font-size:.98em;font-weight:680;margin:1.6em 0 .5em;color:var(--ink);
@@ -213,12 +216,12 @@ figure.viz svg{width:100%;height:auto;display:block}
 .cs-row{display:flex;gap:14px;position:relative;padding-bottom:18px}
 .cs-row:not(:last-child):before{content:"";position:absolute;left:15px;top:34px;bottom:0;
   width:2px;background:var(--grid)}
-.cs-bubble{flex:0 0 32px;height:32px;border-radius:50%;background:var(--accent);color:#141110;
+.cs-bubble{flex:0 0 32px;height:32px;border-radius:50%;background:var(--accent);color:#0a0a0b;
   display:flex;align-items:center;justify-content:center;font-weight:750;font-size:.9em;z-index:1}
 .cs-title{font-weight:650;font-size:.95em;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
 .cs-badges{display:inline-flex;gap:6px}
-.cs-badge{font-size:.78em;font-weight:600;color:var(--muted);white-space:nowrap}
-.cs-badge+.cs-badge:before{content:"\00B7";margin-right:6px;color:var(--grid)}
+.cs-badge{font-size:.72em;font-weight:600;color:var(--ink2);background:var(--page);
+  border:1px solid var(--ring);border-radius:999px;padding:1px 9px;white-space:nowrap}
 .cs-nodes{color:var(--accent)}
 .cs-done{font-size:.8em;color:var(--muted);margin-top:3px}
 
@@ -241,7 +244,7 @@ figure.viz svg{width:100%;height:auto;display:block}
 /* tooltip */
 #tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--page);
   font-size:.76em;line-height:1.4;padding:6px 10px;border-radius:8px;max-width:280px;
-  opacity:0;transition:opacity .12s;box-shadow:0 3px 10px rgba(12,9,7,.45)}
+  opacity:0;transition:opacity .12s;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
@@ -249,7 +252,7 @@ figure.viz svg{width:100%;height:auto;display:block}
   <div class="hero-in">
     <div class="hero-main">
       <a class="hero-back" href="https://blog.crawley.systems/">[crawley.systems] ← blog</a>
-      <div class="hero-kicker">Special feature · Field guide · the Spark estate</div>
+      <div class="hero-kicker"><span class="dot"></span>Special feature · Field guide · the Spark estate</div>
       <h1>Custom Training on DGX Spark: The Full Field Guide</h1>
       <p class="hero-sub">A follow-along textbook for going from "no idea what I'm doing" to training, evaluating, and serving your own models on the Spark estate. Written to be read top-to-bottom once, then used as a reference. Every acronym is spelled out the first time it appears, and every section links to the best deeper resource I know of.</p>
       <p class="hero-note">Fair warning: despite the four-node estate, multi-node training gets only a short tour (Part VII and Stage 4). Nearly everything in this guide runs on a single Spark.</p>
