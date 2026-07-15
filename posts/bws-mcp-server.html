@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Giving Your AI Agent a Real Key to the Vault | blog.crawley.systems</title>
   <meta name="description" content="An open-source MCP server that wraps Bitwarden Secrets Manager, giving Claude, Hermes, and every other agent in your infrastructure a controlled, audited path to read and write secrets — without defaulting to sh -c or leaking them through the LLM's context.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="preload" href="../fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../styles.css?v=20260714-deslop">
 </head>
 <body>
 
@@ -25,7 +23,6 @@
   </nav>
 
   <section class="article-hero">
-    <div class="hero__grid-bg"></div>
     <div class="hero__noise"></div>
     <div class="article-hero__inner">
       <a href="/" class="article-hero__back">&larr; All articles</a>
@@ -292,7 +289,6 @@ bws --version</code></pre>
       <hr>
 
       <div class="article-author">
-        <div class="article-author__avatar">KC</div>
         <div class="article-author__info">
           <h4>Kevin Crawley</h4>
           <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>

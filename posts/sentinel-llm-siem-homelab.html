@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Building an LLM-Powered SIEM for Your Homelab | blog.crawley.systems</title>
   <meta name="description" content="How a single Python script and a local language model can turn your Kubernetes cluster logs into actionable security intelligence.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="preload" href="../fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../styles.css?v=20260714-deslop">
   <style>
     .hero-split {
       display: grid;
@@ -210,7 +208,6 @@ if any(device_ip.startswith(prefix) for prefix in PARENTAL_IGNORE_IPS):
       <hr>
 
       <div class="article-author">
-        <div class="article-author__avatar">KC</div>
         <div class="article-author__info">
           <h4>Kevin Crawley</h4>
           <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>

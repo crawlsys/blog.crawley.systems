@@ -1,0 +1,223 @@
+- generic [active] [ref=f5e1]:
+  - navigation [ref=f5e2]:
+    - generic [ref=f5e3]:
+      - link "[blog.crawley.systems]" [ref=f5e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f5e5]:
+        - link "Back to article" [ref=f5e6] [cursor=pointer]:
+          - /url: /posts/local-glm-autonomous-pentest.html
+        - link "Fork" [ref=f5e7] [cursor=pointer]:
+          - /url: https://github.com/crawlsys/pentagi
+  - generic [ref=f5e9]:
+    - link "← Parent article" [ref=f5e10] [cursor=pointer]:
+      - /url: /posts/local-glm-autonomous-pentest.html
+    - generic [ref=f5e11]:
+      - generic [ref=f5e12]: 2026-07-08
+      - generic [ref=f5e13]:
+        - generic [ref=f5e14]: sample-report
+        - generic [ref=f5e15]: ·anonymized
+        - generic [ref=f5e16]: ·unlisted
+    - heading "Sample Autonomous Pentest Report" [level=1] [ref=f5e17]
+    - paragraph [ref=f5e18]:
+      - text: Anonymized companion to
+      - emphasis [ref=f5e19]: Teaching a Desktop-Class Model to Finish the Job
+      - text: . Real methodology and finding classes; fictional org, hosts, and identifiers.
+  - article [ref=f5e20]:
+    - generic [ref=f5e21]:
+      - generic [ref=f5e22]:
+        - text: UNLISTED · noindex · companion document only. This is a
+        - strong [ref=f5e23]: reconstructed, further-anonymized
+        - text: sample. No real customer names, hostnames, tokens, IPs, or org IDs. Finding classes and methodology match a real authenticated engagement driven by local
+        - strong [ref=f5e24]: GLM-5.2
+        - text: + curated PentAGI prompts (
+        - link "crawlsys/pentagi" [ref=f5e25] [cursor=pointer]:
+          - /url: https://github.com/crawlsys/pentagi
+        - text: ).
+      - heading "Engagement summary" [level=2] [ref=f5e26]
+      - table [ref=f5e27]:
+        - rowgroup [ref=f5e28]:
+          - row [ref=f5e29]:
+            - cell "Target" [ref=f5e30]
+            - cell [ref=f5e31]:
+              - code [ref=f5e32]: https://staging.crm.example-app.invalid
+              - text: (fictional)
+          - row [ref=f5e33]:
+            - cell "Type" [ref=f5e34]
+            - cell "Authenticated live testing (multi-principal)" [ref=f5e35]
+          - row [ref=f5e36]:
+            - cell "Auth" [ref=f5e37]
+            - cell "RS256 bearer JWTs (standard user + zero-permission limited user)" [ref=f5e38]
+          - row [ref=f5e39]:
+            - cell "Harness" [ref=f5e40]
+            - cell "PentAGI + GLM-5.2 (local) with stop-and-decide prompt curation" [ref=f5e41]
+          - row [ref=f5e42]:
+            - cell "Volume" [ref=f5e43]
+            - cell "~300 live API calls; 10 attack vectors" [ref=f5e44]
+          - row [ref=f5e45]:
+            - cell "Date" [ref=f5e46]
+            - cell "2026-07-08" [ref=f5e47]
+      - heading "Headline results" [level=2] [ref=f5e48]
+      - table [ref=f5e49]:
+        - rowgroup [ref=f5e50]:
+          - row [ref=f5e51]:
+            - columnheader "ID" [ref=f5e52]
+            - columnheader "Vector" [ref=f5e53]
+            - columnheader "Severity" [ref=f5e54]
+            - columnheader "Status" [ref=f5e55]
+        - rowgroup [ref=f5e56]:
+          - row [ref=f5e57]:
+            - cell "I" [ref=f5e58]
+            - cell "Portal token-in-URL PII" [ref=f5e59]
+            - cell "High" [ref=f5e60]
+            - cell "CONFIRMED" [ref=f5e61]
+          - row [ref=f5e62]:
+            - cell "C" [ref=f5e63]
+            - cell "MCP-style rate-limit / permission gap" [ref=f5e64]
+            - cell "Medium" [ref=f5e65]
+            - cell "CONFIRMED" [ref=f5e66]
+          - row [ref=f5e67]:
+            - cell "G" [ref=f5e68]
+            - cell "Webhook token-only injection" [ref=f5e69]
+            - cell "Medium" [ref=f5e70]
+            - cell "Primary NOT-CONFIRMED / secondary CONFIRMED" [ref=f5e71]
+          - row [ref=f5e72]:
+            - cell "A" [ref=f5e73]
+            - cell "Cross-tenant IDOR" [ref=f5e74]
+            - cell "Medium" [ref=f5e75]
+            - cell "Primary NOT-CONFIRMED / secondary CONFIRMED" [ref=f5e76]
+          - row [ref=f5e77]:
+            - cell "J" [ref=f5e78]
+            - cell "Client route/leak enumeration" [ref=f5e79]
+            - cell "Low" [ref=f5e80]
+            - cell "Partial (route leak CONFIRMED)" [ref=f5e81]
+          - row [ref=f5e82]:
+            - cell "F" [ref=f5e83]
+            - cell "Stored XSS via unsafe HTML path" [ref=f5e84]
+            - cell "Low" [ref=f5e85]
+            - cell "NOT-CONFIRMED (latent)" [ref=f5e86]
+          - row [ref=f5e87]:
+            - cell "E" [ref=f5e88]
+            - cell "Upload MIME/size spoof" [ref=f5e89]
+            - cell "Low" [ref=f5e90]
+            - cell "NOT-CONFIRMED (mitigated)" [ref=f5e91]
+          - row [ref=f5e92]:
+            - cell "D" [ref=f5e93]
+            - cell "Impersonation / org-switch" [ref=f5e94]
+            - cell "Low" [ref=f5e95]
+            - cell "NOT-CONFIRMED (mitigated)" [ref=f5e96]
+          - row [ref=f5e97]:
+            - cell "B" [ref=f5e98]
+            - cell "Session route auth defect" [ref=f5e99]
+            - cell "Info" [ref=f5e100]
+            - cell "NOT-CONFIRMED (mitigated)" [ref=f5e101]
+          - row [ref=f5e102]:
+            - cell "H" [ref=f5e103]
+            - cell "Test-mode HS256 bypass" [ref=f5e104]
+            - cell "Info" [ref=f5e105]
+            - cell "NOT-CONFIRMED (mitigated)" [ref=f5e106]
+      - paragraph [ref=f5e107]:
+        - text: "Of ten vectors:"
+        - strong [ref=f5e108]: 2 confirmed on primary criterion
+        - text: ","
+        - strong [ref=f5e109]: 1 partial
+        - text: ","
+        - strong [ref=f5e110]: 7 not confirmed on primary
+        - text: (several still produced secondary defects). Positive controls mattered as much as the hits — the model was allowed to call NOT-CONFIRMED and move on.
+      - generic [ref=f5e111]:
+        - heading "I — Portal share token returns full PII without auth" [level=3] [ref=f5e112]
+        - generic [ref=f5e113]:
+          - generic [ref=f5e114]: High
+          - generic [ref=f5e115]: "Status: CONFIRMED"
+          - generic [ref=f5e116]: Primary criterion
+        - paragraph [ref=f5e117]:
+          - code [ref=f5e118]: GET /api/public/proposals/:shareToken
+          - text: returned full customer and sales-rep PII, financial fields, legal agreement text, and signature image material with
+          - strong [ref=f5e119]: no authentication and no rate limiting
+          - text: . Share tokens were also listable by any authenticated principal with document-read permission, forming a two-step harvest-then-exfiltrate chain.
+        - paragraph [ref=f5e120]:
+          - strong [ref=f5e121]: "Evidence shape (redacted):"
+        - code [ref=f5e123]: "GET /api/public/proposals/<64-char-token> → 200 { contact{email, phone, address}, salesRep{email, phone}, signerMeta, signatureData:\"<redacted>\", ... }"
+        - paragraph [ref=f5e124]:
+          - strong [ref=f5e125]: Why this is the sufficiency example.
+          - text: "One working token established CONFIRMED. The first (uncurated) run burned cycles guessing dozens more tokens after the pattern was already obvious. The curated rule is: one PoC = stop enumerating."
+        - paragraph [ref=f5e126]:
+          - strong [ref=f5e127]: "Remediation sketch:"
+          - text: require auth or short-lived signed URLs; rate-limit and monitor; never return full PII packages to an unauthenticated surface; treat list endpoints that reveal share tokens as sensitive.
+      - generic [ref=f5e128]:
+        - 'heading "C — MCP-style endpoint: no rate limit, no permission gate" [level=3] [ref=f5e129]'
+        - generic [ref=f5e130]:
+          - generic [ref=f5e131]: Medium
+          - generic [ref=f5e132]: "Status: CONFIRMED"
+        - paragraph [ref=f5e133]:
+          - code [ref=f5e134]: POST /api/mcp
+          - text: (name illustrative) accepted rapid fire requests with no 429s (20/20 → 200) and accepted a zero-permission limited principal. That combination turns a convenient integration surface into an abuse and privilege-blind automation channel.
+        - paragraph [ref=f5e135]:
+          - strong [ref=f5e136]: "Remediation sketch:"
+          - text: enforce the same permission model as the rest of the API; add rate limits and abuse detection; prefer scoped tokens for machine callers.
+      - generic [ref=f5e137]:
+        - 'heading "G — Lead webhook: token-only path, optional HMAC" [level=3] [ref=f5e138]'
+        - generic [ref=f5e139]:
+          - generic [ref=f5e140]: Medium
+          - generic [ref=f5e141]: "Primary: NOT-CONFIRMED · Secondary: CONFIRMED"
+        - paragraph [ref=f5e142]: "End-to-end injection was not demonstrated (no valid webhook token recovered). Secondary confirmation: the route is intentionally unauthenticated (404 rather than 401 without a bearer), and per-row HMAC signing secrets are optional — rows with no secret accept token-only POSTs with no cryptographic verification."
+      - generic [ref=f5e143]:
+        - heading "A — Cross-tenant IDOR (primary blocked)" [level=3] [ref=f5e144]
+        - generic [ref=f5e145]:
+          - generic [ref=f5e146]: Medium
+          - generic [ref=f5e147]: "Primary: NOT-CONFIRMED · Secondary: CONFIRMED"
+        - paragraph [ref=f5e148]: "No foreign-org row could be captured. Organization context was server-derived from the JWT / DB, and client-supplied org fields were ignored. Secondary issues still confirmed: silent acceptance of org-tampering query params, unauthenticated PII via the same share-token surface as Finding I, and a broken error path returning 500 for missing IDs."
+      - generic [ref=f5e149]:
+        - heading "Positive / mitigated results (selected)" [level=3] [ref=f5e150]
+        - generic [ref=f5e151]:
+          - generic [ref=f5e152]: Positive
+          - generic [ref=f5e153]: These are intentional wins
+        - list [ref=f5e154]:
+          - listitem [ref=f5e155]:
+            - strong [ref=f5e156]: "B — Session route auth defect:"
+            - text: suspected route not deployed; global
+            - code [ref=f5e157]: /api/*
+            - text: auth middleware compensated.
+          - listitem [ref=f5e158]:
+            - strong [ref=f5e159]: "D — Impersonation / org-switch:"
+            - text: tampering ignored; admin switch endpoints correctly 403'd for non-admins.
+          - listitem [ref=f5e160]:
+            - strong [ref=f5e161]: "E — Upload MIME/size spoof:"
+            - text: server-side allowlist + size bounds + auth at presign time.
+          - listitem [ref=f5e162]:
+            - strong [ref=f5e163]: "F — Stored XSS:"
+            - text: unsafe HTML path exists in code but was not reachable with test privileges; notes rendered through a sanitizer; CSP blocked inline handlers. Logged as latent, not confirmed exploit.
+          - listitem [ref=f5e164]:
+            - strong [ref=f5e165]: "H — Test-mode HS256 bypass:"
+            - text: strong positive — RS256/JWKS enforced; candidate HS256 secrets,
+            - code [ref=f5e166]: alg:none
+            - text: ", and payload variants all 401."
+        - paragraph [ref=f5e167]:
+          - text: On the first (uncurated) run, several of these would have been infinite grinds. On the closed run, the agent wrote NOT-CONFIRMED, called
+          - code [ref=f5e168]: hack_result
+          - text: ", and advanced."
+      - heading "Cross-cutting notes" [level=2] [ref=f5e169]
+      - paragraph [ref=f5e170]:
+        - strong [ref=f5e171]: "Strengths observed:"
+        - text: uniform unauthenticated 401 on
+        - code [ref=f5e172]: /api/*
+        - text: ; server-derived org context; RS256 algorithm pinning.
+      - paragraph [ref=f5e173]:
+        - strong [ref=f5e174]: "Weaknesses observed:"
+        - text: missing rate limits on sensitive public/integration surfaces; long-lived share tokens as unauthenticated PII oracles; silent acceptance of authorization-relevant client fields (currently harmless, latent escalation risk).
+      - heading "Method note (autonomous harness)" [level=2] [ref=f5e175]
+      - paragraph [ref=f5e176]:
+        - text: "Subtasks were atomic (one vector each). The evidence-sufficiency rule was: one working PoC = CONFIRMED; primary path blocked = NOT-CONFIRMED; stop enumerating once the call can be made. That rule is what turned a fifteen-hour non-closing run into a finished report. See the parent article and"
+        - link "FORK-NOTES.md" [ref=f5e177] [cursor=pointer]:
+          - /url: https://github.com/crawlsys/pentagi/blob/main/FORK-NOTES.md
+        - text: .
+      - separator [ref=f5e178]
+      - paragraph [ref=f5e179]:
+        - link "← Back to the article" [ref=f5e180] [cursor=pointer]:
+          - /url: /posts/local-glm-autonomous-pentest.html
+        - text: ·
+        - link "crawlsys/pentagi" [ref=f5e181] [cursor=pointer]:
+          - /url: https://github.com/crawlsys/pentagi
+  - contentinfo [ref=f5e182]:
+    - generic [ref=f5e183]:
+      - generic [ref=f5e184]: "[crawley.systems]"
+      - generic [ref=f5e185]: © 2026 Kevin Crawley. Sample report — anonymized, unlisted.

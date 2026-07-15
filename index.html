@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>blog.crawley.systems — Engineering Notes from Production</title>
   <meta name="description" content="Technical writing on infrastructure, security, Kubernetes, and platform engineering from Kevin Crawley.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260711-feature">
+  <link rel="preload" href="fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=20260714-deslop">
 </head>
 <body>
 
@@ -30,17 +28,11 @@
       <div class="hero__slide" style="--hero-image: url('blog-hero-supply-chain.webp')"></div>
       <div class="hero__slide" style="--hero-image: url('blog-hero-observability.webp')"></div>
     </div>
-    <div class="hero__grid-bg"></div>
     <div class="hero__noise"></div>
     <div class="hero__content">
-      <div class="hero__label">
-        <span class="hero__label-dot"></span>
-        <span class="hero__label-text">Engineering notes from production</span>
-      </div>
       <h1 class="hero__title">
-        <span class="hero__title-line hero__title-line--1">Dispatches from</span>
-        <span class="hero__title-line hero__title-line--2">the infrastructure</span>
-        <span class="hero__title-line hero__title-line--3">trenches<span class="hero__title-cursor">_</span></span>
+        <span class="hero__title-line hero__title-line--1">Dispatches from the</span>
+        <span class="hero__title-line hero__title-line--2">infrastructure trenches<span class="hero__title-cursor">_</span></span>
       </h1>
       <p class="hero__sub">
         Long-form writing on security, Kubernetes, platform engineering,
@@ -56,10 +48,8 @@
 
   <section class="posts feature" id="feature">
     <div class="posts__inner">
-      <span class="section-tag">// special feature</span>
-
       <a href="special/dgx-spark-training-field-guide.html" class="post-card feature-card">
-        <div class="feature-card__badge"><span class="feature-card__badge-dot"></span>Interactive field guide</div>
+        <p class="feature-card__lede">An interactive field guide</p>
         <h2 class="post-card__title feature-card__title">Custom Training on DGX Spark: The Full Field Guide</h2>
         <p class="post-card__excerpt">A follow-along textbook for the Spark estate: from next-token prediction to LoRA, QLoRA, quantization, and a taste of multi-node FSDP, with the memory math drawn to scale, loss-curve ECGs, and a hands-on curriculum from nanoGPT to serving your own model behind litellm.</p>
         <div class="post-card__meta feature-card__meta">
@@ -74,14 +64,14 @@
             <span class="tag">distributed</span>
           </span>
         </div>
-        <span class="post-card__read">Open the field guide &rarr;</span>
+        <span class="post-card__read">Open the field guide</span>
       </a>
     </div>
   </section>
 
   <section class="posts" id="posts">
     <div class="posts__inner">
-      <span class="section-tag">// recent</span>
+      <h2 class="section-heading">Recent writing</h2>
 
       <a href="posts/local-glm-autonomous-pentest.html" class="post-card">
         <div class="post-card__meta">
@@ -96,7 +86,7 @@
         </div>
         <h2 class="post-card__title">Autonomous Pentesting on Self-Hosted GLM-5.2</h2>
         <p class="post-card__excerpt">Four DGX Sparks on the desk. Buying the IQ costs a car — or a kidney. Finishing the job took reshaping the system prompts.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/tanstack-pnpm-supply-chain.html" class="post-card">
@@ -112,7 +102,7 @@
         </div>
         <h2 class="post-card__title">TanStack, Mini Shai-Hulud, and Why You Should Vendor Your Dependencies</h2>
         <p class="post-card__excerpt">84 malicious @tanstack/* versions reached npm in a six-minute publish burst. Three pnpm settings buy you the time to notice. Pulling your dependencies into source control closes the door entirely.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/claude-local-inference-skills.html" class="post-card">
@@ -128,7 +118,7 @@
         </div>
         <h2 class="post-card__title">Stop Burning Frontier Tokens on Routine Inference</h2>
         <p class="post-card__excerpt">Two small CLIs and a pair of Claude skills push image, video, and research work onto a homelab GPU. Frontier intelligence stays for the part of the job that actually needs it.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/honeypot-pentagi-bridge.html" class="post-card">
@@ -144,7 +134,7 @@
         </div>
         <h2 class="post-card__title">Turning Honeypot Noise into PentAGI Investigations</h2>
         <p class="post-card__excerpt">A small FTP daemon collects scanner traffic, a watcher turns new IPs into bounded PentAGI flows, and a local Qwen3-Coder model on an RTX 5090 handles the routine investigation work.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/bitwarden-cli-supply-chain-defense.html" class="post-card">
@@ -159,7 +149,7 @@
         </div>
         <h2 class="post-card__title">Stop Letting npm Install Talk to the Internet</h2>
         <p class="post-card__excerpt">For 93 minutes, npm install @bitwarden/cli was the breach. The fix is not a faster IOC feed; it is lifecycle-script control, release-age gating, internal registries, and CI egress that fails closed.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/bws-mcp-server.html" class="post-card">
@@ -175,7 +165,7 @@
         </div>
         <h2 class="post-card__title">Giving Your AI Agent a Real Key to the Vault</h2>
         <p class="post-card__excerpt">A new open-source MCP server that wraps Bitwarden Secrets Manager, so Claude (or Hermes, or whoever's driving your homelab this week) gets a controlled, audited path to read and write secrets — without you teaching it how to eval shell strings.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/sentinel-llm-siem-homelab.html" class="post-card">
@@ -190,7 +180,7 @@
         </div>
         <h2 class="post-card__title">Building an LLM-Powered SIEM That Fits in a Single File</h2>
         <p class="post-card__excerpt">How a single Python script and an LLM endpoint can turn your Kubernetes cluster logs into actionable security intelligence. Point it at any Loki instance. No SIEM subscriptions, no per-GB ingestion fees.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/copilot-code-review-programmatic.html" class="post-card">
@@ -204,7 +194,7 @@
         </div>
         <h2 class="post-card__title">How to Trigger GitHub Copilot Code Reviews Programmatically</h2>
         <p class="post-card__excerpt">The undocumented bot name, the silent failures, and the three working approaches for requesting Copilot code reviews from CI/CD pipelines and agentic workflows.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
       <a href="posts/litellm-supply-chain-attack.html" class="post-card">
@@ -218,7 +208,7 @@
         </div>
         <h2 class="post-card__title">The LiteLLM Supply Chain Attack and Why Your Secrets Shouldn't Survive Boot</h2>
         <p class="post-card__excerpt">Yesterday's PyPI compromise of LiteLLM harvested every credential it could find on disk. Here's how ephemeral filesystem secrets via the Kubernetes Secrets Store CSI Driver reduce the blast radius of exactly this class of attack.</p>
-        <span class="post-card__read">Read article &rarr;</span>
+        <span class="post-card__read">Read article</span>
       </a>
 
     </div>

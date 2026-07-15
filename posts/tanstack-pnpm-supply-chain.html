@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TanStack, Mini Shai-Hulud, and Why You Should Vendor Your Dependencies | blog.crawley.systems</title>
   <meta name="description" content="84 malicious @tanstack/* versions reached npm in a six-minute publish burst. Three pnpm settings buy you the time to notice. Pulling your dependencies into source control closes the door entirely.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="preload" href="../fonts/gambarino-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../styles.css?v=20260714-deslop">
   <style>
     .diagram-figure {
       margin: 36px 0;
@@ -59,7 +57,6 @@
   </nav>
 
   <section class="article-hero">
-    <div class="hero__grid-bg"></div>
     <div class="hero__noise"></div>
     <div class="article-hero__inner">
       <a href="/" class="article-hero__back">&larr; All articles</a>
@@ -99,60 +96,60 @@
           <title id="diag1-title">TanStack attack chain: pwn request, cache poisoning, OIDC theft.</title>
           <defs>
             <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-              <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b" />
+              <path d="M0,0 L10,5 L0,10 z" fill="#c99756" />
             </marker>
             <marker id="arrowred" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-              <path d="M0,0 L10,5 L0,10 z" fill="#ef4444" />
+              <path d="M0,0 L10,5 L0,10 z" fill="#c97a6e" />
             </marker>
           </defs>
-          <rect x="0" y="0" width="880" height="360" fill="#0a0a0b" />
+          <rect x="0" y="0" width="880" height="360" fill="#141110" />
           <!-- lane 1: attacker fork -->
-          <text x="20" y="28" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">STAGE 1 / PWN REQUEST</text>
-          <rect x="20" y="48" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="40" y="76" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">Attacker fork</text>
-          <text x="40" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">commit prefixed [skip ci]</text>
-          <text x="40" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">+ 30k-line vite_setup.mjs</text>
-          <text x="40" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444">PR opens against main</text>
+          <text x="20" y="28" font-family="ui-monospace, monospace" font-size="12" fill="#8d8272" letter-spacing="0.06em">STAGE 1 / PWN REQUEST</text>
+          <rect x="20" y="48" width="240" height="100" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="40" y="76" font-family="system-ui, sans-serif" font-size="14" fill="#f0e9df" font-weight="600">Attacker fork</text>
+          <text x="40" y="98" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">commit prefixed [skip ci]</text>
+          <text x="40" y="116" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">+ 30k-line vite_setup.mjs</text>
+          <text x="40" y="134" font-family="ui-monospace, monospace" font-size="11" fill="#c97a6e">PR opens against main</text>
 
-          <path d="M 260,98 L 332,98" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow1)" />
+          <path d="M 260,98 L 332,98" stroke="#c99756" stroke-width="2" fill="none" marker-end="url(#arrow1)" />
 
-          <rect x="340" y="48" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="360" y="76" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">bundle-size.yml</text>
-          <text x="360" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">trigger: pull_request_target</text>
-          <text x="360" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">checks out PR tree</text>
-          <text x="360" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">runs pnpm install (base perms)</text>
+          <rect x="340" y="48" width="240" height="100" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="360" y="76" font-family="system-ui, sans-serif" font-size="14" fill="#f0e9df" font-weight="600">bundle-size.yml</text>
+          <text x="360" y="98" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">trigger: pull_request_target</text>
+          <text x="360" y="116" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">checks out PR tree</text>
+          <text x="360" y="134" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">runs pnpm install (base perms)</text>
 
-          <path d="M 580,98 L 652,98" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow1)" />
+          <path d="M 580,98 L 652,98" stroke="#c99756" stroke-width="2" fill="none" marker-end="url(#arrow1)" />
 
-          <rect x="660" y="48" width="200" height="100" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="680" y="76" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">STAGE 2 / CACHE</text>
-          <text x="680" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">1.1 GB poisoned cache</text>
-          <text x="680" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">key matches release.yml</text>
-          <text x="680" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#22c55e">saved, waits 8 hours</text>
+          <rect x="660" y="48" width="200" height="100" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="680" y="76" font-family="system-ui, sans-serif" font-size="14" fill="#f0e9df" font-weight="600">STAGE 2 / CACHE</text>
+          <text x="680" y="98" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">1.1 GB poisoned cache</text>
+          <text x="680" y="116" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">key matches release.yml</text>
+          <text x="680" y="134" font-family="ui-monospace, monospace" font-size="11" fill="#79a884">saved, waits 8 hours</text>
 
           <!-- lane 2: legit run -->
-          <text x="20" y="190" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">STAGE 3 / OIDC THEFT</text>
-          <rect x="20" y="210" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="40" y="238" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">Maintainer pushes to main</text>
-          <text x="40" y="260" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">release.yml fires</text>
-          <text x="40" y="278" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">actions/cache restore</text>
-          <text x="40" y="296" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444">poisoned tree loaded</text>
+          <text x="20" y="190" font-family="ui-monospace, monospace" font-size="12" fill="#8d8272" letter-spacing="0.06em">STAGE 3 / OIDC THEFT</text>
+          <rect x="20" y="210" width="240" height="100" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="40" y="238" font-family="system-ui, sans-serif" font-size="14" fill="#f0e9df" font-weight="600">Maintainer pushes to main</text>
+          <text x="40" y="260" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">release.yml fires</text>
+          <text x="40" y="278" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">actions/cache restore</text>
+          <text x="40" y="296" font-family="ui-monospace, monospace" font-size="11" fill="#c97a6e">poisoned tree loaded</text>
 
-          <path d="M 260,260 L 332,260" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrowred)" />
+          <path d="M 260,260 L 332,260" stroke="#c97a6e" stroke-width="2" fill="none" marker-end="url(#arrowred)" />
 
-          <rect x="340" y="210" width="240" height="100" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="360" y="238" font-family="Outfit, sans-serif" font-size="14" fill="#fafafa" font-weight="600">Runner.Worker memdump</text>
-          <text x="360" y="260" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">scan /proc/*/cmdline</text>
-          <text x="360" y="278" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">read process memory</text>
-          <text x="360" y="296" font-family="JetBrains Mono, monospace" font-size="11" fill="#ef4444">extract OIDC publish token</text>
+          <rect x="340" y="210" width="240" height="100" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="360" y="238" font-family="system-ui, sans-serif" font-size="14" fill="#f0e9df" font-weight="600">Runner.Worker memdump</text>
+          <text x="360" y="260" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">scan /proc/*/cmdline</text>
+          <text x="360" y="278" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">read process memory</text>
+          <text x="360" y="296" font-family="ui-monospace, monospace" font-size="11" fill="#c97a6e">extract OIDC publish token</text>
 
-          <path d="M 580,260 L 652,260" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrowred)" />
+          <path d="M 580,260 L 652,260" stroke="#c97a6e" stroke-width="2" fill="none" marker-end="url(#arrowred)" />
 
-          <rect x="660" y="210" width="200" height="100" rx="6" fill="#141416" stroke="#ef4444" stroke-width="2" />
-          <text x="680" y="238" font-family="Outfit, sans-serif" font-size="14" fill="#ef4444" font-weight="600">npm publish x84</text>
-          <text x="680" y="260" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">19:20 - 19:26 UTC</text>
-          <text x="680" y="278" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">42 packages</text>
-          <text x="680" y="296" font-family="JetBrains Mono, monospace" font-size="11" fill="#a1a1aa">valid SLSA provenance</text>
+          <rect x="660" y="210" width="200" height="100" rx="6" fill="#181411" stroke="#c97a6e" stroke-width="2" />
+          <text x="680" y="238" font-family="system-ui, sans-serif" font-size="14" fill="#c97a6e" font-weight="600">npm publish x84</text>
+          <text x="680" y="260" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">19:20 - 19:26 UTC</text>
+          <text x="680" y="278" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">42 packages</text>
+          <text x="680" y="296" font-family="ui-monospace, monospace" font-size="11" fill="#b0a494">valid SLSA provenance</text>
         </svg>
         <figcaption>// the three-stage trust chain — none of these are zero-days</figcaption>
       </figure>
@@ -307,39 +304,39 @@ allowBuilds:
       <figure class="diagram-figure">
         <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="diag2-title">
           <title id="diag2-title">Registry-resolved vs vendored dependency flow.</title>
-          <rect x="0" y="0" width="880" height="300" fill="#0a0a0b" />
-          <text x="20" y="28" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">REGISTRY-RESOLVED (TODAY)</text>
-          <rect x="20" y="48" width="160" height="60" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="100" y="84" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">your repo</text>
-          <text x="200" y="84" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
-          <rect x="220" y="48" width="160" height="60" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="300" y="78" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">pnpm install</text>
-          <text x="300" y="96" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">at build time</text>
-          <text x="400" y="84" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
-          <rect x="420" y="48" width="200" height="60" rx="6" fill="#141416" stroke="#ef4444" />
-          <text x="520" y="78" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#ef4444">public registry</text>
-          <text x="520" y="96" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">mutable, unaudited</text>
-          <text x="640" y="84" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
-          <rect x="660" y="48" width="200" height="60" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="760" y="84" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">node_modules/</text>
+          <rect x="0" y="0" width="880" height="300" fill="#141110" />
+          <text x="20" y="28" font-family="ui-monospace, monospace" font-size="12" fill="#8d8272" letter-spacing="0.06em">REGISTRY-RESOLVED (TODAY)</text>
+          <rect x="20" y="48" width="160" height="60" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="100" y="84" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#f0e9df">your repo</text>
+          <text x="200" y="84" font-family="ui-monospace, monospace" font-size="16" fill="#8d8272">→</text>
+          <rect x="220" y="48" width="160" height="60" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="300" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#f0e9df">pnpm install</text>
+          <text x="300" y="96" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#b0a494">at build time</text>
+          <text x="400" y="84" font-family="ui-monospace, monospace" font-size="16" fill="#8d8272">→</text>
+          <rect x="420" y="48" width="200" height="60" rx="6" fill="#181411" stroke="#c97a6e" />
+          <text x="520" y="78" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#c97a6e">public registry</text>
+          <text x="520" y="96" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#b0a494">mutable, unaudited</text>
+          <text x="640" y="84" font-family="ui-monospace, monospace" font-size="16" fill="#8d8272">→</text>
+          <rect x="660" y="48" width="200" height="60" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="760" y="84" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#f0e9df">node_modules/</text>
 
-          <line x1="20" y1="148" x2="860" y2="148" stroke="#27272a" stroke-dasharray="4 4" />
+          <line x1="20" y1="148" x2="860" y2="148" stroke="#2e2721" stroke-dasharray="4 4" />
 
-          <text x="20" y="180" font-family="JetBrains Mono, monospace" font-size="12" fill="#71717a" letter-spacing="0.06em">VENDORED (META PATTERN)</text>
-          <rect x="20" y="200" width="160" height="60" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="100" y="226" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">your repo</text>
-          <text x="100" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#22c55e">+ third-party/</text>
-          <text x="200" y="234" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
-          <rect x="220" y="200" width="240" height="60" rx="6" fill="#141416" stroke="#22c55e" />
-          <text x="340" y="226" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#22c55e">reviewed diff at upgrade</text>
-          <text x="340" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">human eyes on the bytes</text>
-          <text x="480" y="234" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
-          <rect x="500" y="200" width="180" height="60" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="590" y="226" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">build (offline)</text>
-          <text x="590" y="246" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a1a1aa">no network for deps</text>
-          <text x="700" y="234" font-family="JetBrains Mono, monospace" font-size="16" fill="#71717a">→</text>
-          <rect x="720" y="200" width="140" height="60" rx="6" fill="#141416" stroke="#27272a" />
-          <text x="790" y="234" text-anchor="middle" font-family="Outfit, sans-serif" font-size="13" fill="#fafafa">artifact</text>
+          <text x="20" y="180" font-family="ui-monospace, monospace" font-size="12" fill="#8d8272" letter-spacing="0.06em">VENDORED (META PATTERN)</text>
+          <rect x="20" y="200" width="160" height="60" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="100" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#f0e9df">your repo</text>
+          <text x="100" y="246" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#79a884">+ third-party/</text>
+          <text x="200" y="234" font-family="ui-monospace, monospace" font-size="16" fill="#8d8272">→</text>
+          <rect x="220" y="200" width="240" height="60" rx="6" fill="#181411" stroke="#79a884" />
+          <text x="340" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#79a884">reviewed diff at upgrade</text>
+          <text x="340" y="246" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#b0a494">human eyes on the bytes</text>
+          <text x="480" y="234" font-family="ui-monospace, monospace" font-size="16" fill="#8d8272">→</text>
+          <rect x="500" y="200" width="180" height="60" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="590" y="226" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#f0e9df">build (offline)</text>
+          <text x="590" y="246" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#b0a494">no network for deps</text>
+          <text x="700" y="234" font-family="ui-monospace, monospace" font-size="16" fill="#8d8272">→</text>
+          <rect x="720" y="200" width="140" height="60" rx="6" fill="#181411" stroke="#2e2721" />
+          <text x="790" y="234" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#f0e9df">artifact</text>
         </svg>
         <figcaption>// two trust models for the same install step</figcaption>
       </figure>
@@ -388,7 +385,6 @@ allowBuilds:
       <hr>
 
       <div class="article-author">
-        <div class="article-author__avatar">KC</div>
         <div class="article-author__info">
           <h4>Kevin Crawley</h4>
           <p>Infrastructure engineer, <a href="https://crawley.systems">crawley.systems</a>. 20+ years building and operating production systems.</p>
